@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/chat_nav"
+    app:startDestination="@id/chatListFragment">
+
+    <fragment
+        android:id="@+id/chatListFragment"
+        android:name="com.example.goheung.presentation.fragment.chat.chatlist.ChatListFragment"
+        android:label="채팅"
+        tools:layout="@layout/fragment_chat_list">
+
+        <action
+            android:id="@+id/action_chatList_to_chatDetail"
+            app:destination="@id/chatDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/chatDetailFragment"
+        android:name="com.example.goheung.presentation.fragment.chat.chatdetail.ChatDetailFragment"
+        android:label="채팅"
+        tools:layout="@layout/fragment_chat_detail">
+
+        <argument
+            android:name="chatRoomId"
+            app:argType="string" />
+
+        <argument
+            android:name="otherUserName"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+</navigation>

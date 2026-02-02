@@ -5,7 +5,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.databinding.ItemChatRoomBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -14,8 +13,8 @@ import java.util.Locale
  * Adapter for displaying chat rooms list
  */
 class ChatListAdapter(
-    private val onChatRoomClick: (ChatRoom) -> Unit
-) : ListAdapter<ChatRoom, ChatListAdapter.ChatRoomViewHolder>(ChatRoomDiffCallback()) {
+    private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
+) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, ChatListAdapter.ChatRoomViewHolder>(ChatRoomDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
         val binding = ItemChatRoomBinding.inflate(
@@ -32,18 +31,18 @@ class ChatListAdapter(
 
     class ChatRoomViewHolder(
         private val binding: ItemChatRoomBinding,
-        private val onChatRoomClick: (ChatRoom) -> Unit
+        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-        fun bind(chatRoom: ChatRoom) {
+        fun bind(item: ChatListViewModel.ChatRoomWithParticipants) {
             binding.apply {
-                textViewChatRoomName.text = chatRoom.name
-                textViewLastMessage.text = chatRoom.lastMessage.ifEmpty { "No messages yet" }
+                textViewChatRoomName.text = item.displayName
+                textViewLastMessage.text = item.chatRoom.lastMessage.ifEmpty { "No messages yet" }
 
-                chatRoom.lastMessageTimestamp?.let { timestamp ->
+                item.chatRoom.lastMessageTimestamp?.let { timestamp ->
                     val formattedTime = timeFormat.format(timestamp)
                     textViewTimestamp.text = formattedTime
                 } ?: run {
@@ -51,18 +50,24 @@ class ChatListAdapter(
                 }
 
                 root.setOnClickListener {
-                    onChatRoomClick(chatRoom)
+                    onChatRoomClick(item)
                 }
             }
         }
     }
 
-    private class ChatRoomDiffCallback : DiffUtil.ItemCallback<ChatRoom>() {
-        override fun areItemsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
-            return oldItem.id == newItem.id
+    private class ChatRoomDiffCallback : DiffUtil.ItemCallback<ChatListViewModel.ChatRoomWithParticipants>() {
+        override fun areItemsTheSame(
+            oldItem: ChatListViewModel.ChatRoomWithParticipants,
+            newItem: ChatListViewModel.ChatRoomWithParticipants
+        ): Boolean {
+            return oldItem.chatRoom.id == newItem.chatRoom.id
         }
 
-        override fun areContentsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
+        override fun areContentsTheSame(
+            oldItem: ChatListViewModel.ChatRoomWithParticipants,
+            newItem: ChatListViewModel.ChatRoomWithParticipants
+        ): Boolean {
             return oldItem == newItem
         }
     }

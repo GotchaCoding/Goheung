@@ -21,11 +21,11 @@ class ChatRepository @Inject constructor(
 ) {
 
     /**
-     * Get all chat rooms with real-time updates
+     * Get chat rooms for a specific user with real-time updates
      */
-    fun getChatRooms(): Flow<Result<List<ChatRoom>>> = callbackFlow {
+    fun getChatRooms(userId: String): Flow<Result<List<ChatRoom>>> = callbackFlow {
         val listener = firestore.collection(ChatRoom.COLLECTION_NAME)
-            .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
+            .whereArrayContains("participants", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Result.failure(error))
@@ -34,6 +34,7 @@ class ChatRepository @Inject constructor(
 
                 if (snapshot != null) {
                     val chatRooms = snapshot.toObjects(ChatRoom::class.java)
+                        .sortedByDescending { it.lastMessageTimestamp }
                     trySend(Result.success(chatRooms))
                 }
             }

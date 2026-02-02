@@ -7,8 +7,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.example.goheung.presentation.auth.LoginFragment
 import com.example.goheung.presentation.chat.ChatListFragment
-import com.example.goheung.presentation.friend.FriendListFragment
 import com.example.goheung.presentation.more.MoreFragment
+import com.example.goheung.presentation.user.UserListFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity(), BottomNavController {
 
         supportFragmentManager.addOnBackStackChangedListener {
             val current = supportFragmentManager.findFragmentById(R.id.fragment_container)
-            if (current is ChatListFragment || current is FriendListFragment || current is MoreFragment) {
+            if (current is ChatListFragment || current is UserListFragment || current is MoreFragment) {
                 showBottomNav()
             }
         }
@@ -56,8 +56,8 @@ class MainActivity : AppCompatActivity(), BottomNavController {
                     switchTab(ChatListFragment(), "chat")
                     true
                 }
-                R.id.nav_friends -> {
-                    switchTab(FriendListFragment(), "friends")
+                R.id.nav_users -> {
+                    switchTab(UserListFragment(), "users")
                     true
                 }
                 R.id.nav_more -> {

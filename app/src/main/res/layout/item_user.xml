@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:padding="12dp">
@@ -23,18 +24,17 @@
 
         <TextView
             android:id="@+id/textViewName"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/textPrimary"
             android:textSize="16sp"
-            android:textStyle="bold"
             tools:text="홍길동" />
 
         <TextView
             android:id="@+id/textViewDepartment"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
@@ -43,23 +43,4 @@
             android:textSize="14sp"
             tools:text="개발팀" />
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/textViewStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:textColor="@color/textHint"
-        android:textSize="14sp"
-        android:visibility="gone"
-        tools:text="이미 친구" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/buttonSendRequest"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/send_friend_request"
-        android:textSize="12sp" />
 </LinearLayout>

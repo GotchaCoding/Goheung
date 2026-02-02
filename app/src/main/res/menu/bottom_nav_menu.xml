@@ -5,9 +5,9 @@
         android:icon="@drawable/ic_chat"
         android:title="@string/tab_chat" />
     <item
-        android:id="@+id/nav_friends"
+        android:id="@+id/nav_users"
         android:icon="@drawable/ic_people"
-        android:title="@string/tab_friends" />
+        android:title="@string/tab_users" />
     <item
         android:id="@+id/nav_more"
         android:icon="@drawable/ic_more"

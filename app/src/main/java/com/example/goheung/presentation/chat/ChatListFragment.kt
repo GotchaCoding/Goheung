@@ -27,7 +27,8 @@ class ChatListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: ChatListViewModel by viewModels()
-    private lateinit var adapter: ChatListAdapter
+    private lateinit var directMessagesAdapter: ChatListAdapter
+    private lateinit var groupChatsAdapter: ChatListAdapter
 
     @Inject
     lateinit var firebaseAuth: FirebaseAuth
@@ -52,13 +53,25 @@ class ChatListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = ChatListAdapter { chatRoom ->
-            navigateToChatDetail(chatRoom.id, chatRoom.name)
+        directMessagesAdapter = ChatListAdapter { item ->
+            navigateToChatDetail(item.chatRoom.id, item.displayName)
         }
 
-        binding.recyclerViewChatRooms.apply {
+        groupChatsAdapter = ChatListAdapter { item ->
+            navigateToChatDetail(item.chatRoom.id, item.displayName)
+        }
+
+        binding.recyclerViewDirectMessages.apply {
             layoutManager = LinearLayoutManager(requireContext())
-            adapter = this@ChatListFragment.adapter
+            adapter = directMessagesAdapter
+            addItemDecoration(
+                DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
+            )
+        }
+
+        binding.recyclerViewGroupChats.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = groupChatsAdapter
             addItemDecoration(
                 DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
             )
@@ -66,10 +79,18 @@ class ChatListFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        viewModel.chatRooms.observe(viewLifecycleOwner) { chatRooms ->
-            adapter.submitList(chatRooms)
-            binding.textViewEmpty.isVisible = chatRooms.isEmpty()
-            binding.recyclerViewChatRooms.isVisible = chatRooms.isNotEmpty()
+        viewModel.directChats.observe(viewLifecycleOwner) { directChats ->
+            directMessagesAdapter.submitList(directChats)
+            binding.textViewDirectMessagesHeader.isVisible = directChats.isNotEmpty()
+            binding.recyclerViewDirectMessages.isVisible = directChats.isNotEmpty()
+            updateEmptyState()
+        }
+
+        viewModel.groupChats.observe(viewLifecycleOwner) { groupChats ->
+            groupChatsAdapter.submitList(groupChats)
+            binding.textViewGroupChatsHeader.isVisible = groupChats.isNotEmpty()
+            binding.recyclerViewGroupChats.isVisible = groupChats.isNotEmpty()
+            updateEmptyState()
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
@@ -89,6 +110,12 @@ class ChatListFragment : Fragment() {
                 navigateToChatDetail(chatRoomId, chatRoomName)
             }
         }
+    }
+
+    private fun updateEmptyState() {
+        val directChats = viewModel.directChats.value ?: emptyList()
+        val groupChats = viewModel.groupChats.value ?: emptyList()
+        binding.textViewEmpty.isVisible = directChats.isEmpty() && groupChats.isEmpty()
     }
 
     private fun setupListeners() {

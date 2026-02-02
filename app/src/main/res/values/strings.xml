@@ -45,34 +45,18 @@
 
     <!-- Bottom Navigation -->
     <string name="tab_chat">채팅</string>
-    <string name="tab_friends">친구</string>
+    <string name="tab_users">사용자</string>
     <string name="tab_more">더보기</string>
 
     <!-- More / Profile -->
     <string name="logout">로그아웃</string>
     <string name="logout_confirm">로그아웃 하시겠습니까?</string>
 
-    <!-- Friends -->
-    <string name="friend_list_title">친구 목록</string>
-    <string name="no_friends">아직 친구가 없습니다</string>
-    <string name="add_friend">친구 추가</string>
-    <string name="search_user_hint">이름으로 검색</string>
-    <string name="send_friend_request">친구 요청</string>
-    <string name="friend_request_sent">친구 요청을 보냈습니다</string>
-    <string name="already_friend">이미 친구입니다</string>
-    <string name="request_pending">요청 대기 중</string>
-    <string name="no_search_results">검색 결과가 없습니다</string>
+    <!-- User List -->
+    <string name="user_list_title">사용자 목록</string>
+    <string name="no_users">등록된 사용자가 없습니다</string>
 
-    <!-- Friend Requests -->
-    <string name="friend_requests_title">받은 친구 요청</string>
-    <string name="no_friend_requests">받은 친구 요청이 없습니다</string>
-    <string name="accept">수락</string>
-    <string name="reject">거절</string>
-    <string name="friend_request_accepted">친구 요청을 수락했습니다</string>
-    <string name="friend_request_rejected">친구 요청을 거절했습니다</string>
-
-    <!-- Friend Profile -->
-    <string name="start_chat">1:1 채팅</string>
-    <string name="remove_friend">친구 삭제</string>
-    <string name="friend_removed">친구를 삭제했습니다</string>
+    <!-- Chat Sections -->
+    <string name="direct_messages">Direct Messages</string>
+    <string name="group_chats">Group Chats</string>
 </resources>

@@ -2,6 +2,9 @@ package com.example.goheung.data.repository
 
 import com.example.goheung.data.model.User
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,6 +54,47 @@ class UserRepository @Inject constructor(
                 .get()
                 .await()
             val users = snapshot.toObjects(User::class.java)
+            Result.success(users)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getAllUsers(excludeUid: String? = null): Flow<Result<List<User>>> = callbackFlow {
+        val listenerRegistration = usersCollection
+            .orderBy("displayName")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val users = snapshot.toObjects(User::class.java)
+                        .filter { it.uid != excludeUid }
+                    trySend(Result.success(users))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    suspend fun getUsers(uids: List<String>): Result<List<User>> {
+        if (uids.isEmpty()) {
+            return Result.success(emptyList())
+        }
+
+        return try {
+            val users = mutableListOf<User>()
+
+            uids.chunked(10).forEach { chunk ->
+                val snapshot = usersCollection
+                    .whereIn("uid", chunk)
+                    .get()
+                    .await()
+                users.addAll(snapshot.toObjects(User::class.java))
+            }
+
             Result.success(users)
         } catch (e: Exception) {
             Result.failure(e)

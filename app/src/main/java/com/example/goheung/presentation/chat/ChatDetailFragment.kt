@@ -1,15 +1,18 @@
 package com.example.goheung.presentation.chat
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.goheung.R
 import com.example.goheung.databinding.FragmentChatDetailBinding
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -70,6 +73,18 @@ class ChatDetailFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener {
             parentFragmentManager.popBackStack()
         }
+
+        // 그룹 채팅만 메뉴 표시
+        binding.toolbar.inflateMenu(R.menu.menu_chat_detail)
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_edit_chat_name -> {
+                    showEditChatNameDialog()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -111,6 +126,16 @@ class ChatDetailFragment : Fragment() {
 
         viewModel.chatRoom.observe(viewLifecycleOwner) { chatRoom ->
             binding.toolbar.title = chatRoom.name
+
+            // 그룹 채팅만 편집 메뉴 표시
+            val editMenuItem = binding.toolbar.menu.findItem(R.id.action_edit_chat_name)
+            editMenuItem?.isVisible = viewModel.canEditChatName()
+        }
+
+        // 참여자 정보 표시
+        viewModel.participantsDisplay.observe(viewLifecycleOwner) { displayText ->
+            binding.textViewParticipants.text = displayText
+            binding.textViewParticipants.isVisible = displayText.isNotBlank()
         }
     }
 
@@ -130,6 +155,28 @@ class ChatDetailFragment : Fragment() {
                 binding.editTextMessage.text.clear()
             }
         }
+    }
+
+    private fun showEditChatNameDialog() {
+        val currentName = viewModel.chatRoom.value?.name ?: ""
+        val editText = EditText(requireContext()).apply {
+            hint = getString(R.string.chat_room_name_hint)
+            setText(currentName)
+            setPadding(64, 32, 64, 32)
+            selectAll() // 전체 선택으로 빠른 편집 지원
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.edit_chat_room_name)
+            .setView(editText)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val newName = editText.text.toString().trim()
+                if (newName.isNotBlank() && newName != currentName) {
+                    viewModel.updateChatRoomName(newName)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     override fun onResume() {

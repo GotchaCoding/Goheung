@@ -116,6 +116,31 @@ class ChatRepository @Inject constructor(
     }
 
     /**
+     * Get a specific chat room with real-time updates
+     */
+    fun getChatRoomFlow(chatRoomId: String): Flow<Result<ChatRoom>> = callbackFlow {
+        val listener = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .document(chatRoomId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && snapshot.exists()) {
+                    val chatRoom = snapshot.toObject(ChatRoom::class.java)
+                    if (chatRoom != null) {
+                        trySend(Result.success(chatRoom))
+                    }
+                } else {
+                    trySend(Result.failure(Exception("Chat room not found")))
+                }
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    /**
      * Update last message info in chat room
      */
     private suspend fun updateChatRoomLastMessage(
@@ -157,6 +182,19 @@ class ChatRepository @Inject constructor(
             }
 
         batch.commit().await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Update chat room name
+     */
+    suspend fun updateChatRoomName(chatRoomId: String, newName: String): Result<Unit> = try {
+        firestore.collection(ChatRoom.COLLECTION_NAME)
+            .document(chatRoomId)
+            .update("name", newName)
+            .await()
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

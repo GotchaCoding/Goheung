@@ -11,6 +11,8 @@
     <string name="type_message">Type a message</string>
     <string name="send">Send</string>
     <string name="no_messages">No messages yet</string>
+    <string name="edit_chat_room_name">채팅방 이름 변경</string>
+    <string name="save">저장</string>
 
     <!-- New Chat Room Dialog -->
     <string name="new_chat_room_title">New Chat Room</string>

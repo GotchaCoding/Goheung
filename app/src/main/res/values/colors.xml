@@ -30,4 +30,7 @@
 
     <!-- Friend Request Badge -->
     <color name="badgeColor">#F44336</color>
+
+    <!-- Participants -->
+    <color name="participantsBackground">#F5F5F5</color>
 </resources>

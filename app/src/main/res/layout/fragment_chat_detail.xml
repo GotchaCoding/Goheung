@@ -17,6 +17,23 @@
         app:navigationIcon="@drawable/ic_arrow_back"
         app:titleTextColor="@android:color/white" />
 
+    <!-- 참여자 정보 표시 추가 -->
+    <TextView
+        android:id="@+id/textViewParticipants"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/participantsBackground"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        tools:text="홍길동, 김철수 외 3명"
+        tools:visibility="visible" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewMessages"
         android:layout_width="0dp"
@@ -28,7 +45,7 @@
         app:layout_constraintBottom_toTopOf="@id/messageInputLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/textViewParticipants"
         tools:listitem="@layout/item_message_received" />
 
     <ProgressBar
@@ -39,7 +56,7 @@
         app:layout_constraintBottom_toBottomOf="@id/recyclerViewMessages"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/textViewParticipants" />
 
     <TextView
         android:id="@+id/textViewEmpty"
@@ -52,7 +69,7 @@
         app:layout_constraintBottom_toBottomOf="@id/recyclerViewMessages"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/textViewParticipants" />
 
     <LinearLayout
         android:id="@+id/messageInputLayout"

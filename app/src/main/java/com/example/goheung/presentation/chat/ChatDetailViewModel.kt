@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.data.model.Message
 import com.example.goheung.data.model.MessageType
+import com.example.goheung.data.model.User
 import com.example.goheung.data.repository.ChatRepository
+import com.example.goheung.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
@@ -21,6 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatDetailViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -41,13 +44,19 @@ class ChatDetailViewModel @Inject constructor(
     private val _sendingMessage = MutableLiveData<Boolean>()
     val sendingMessage: LiveData<Boolean> = _sendingMessage
 
+    private val _participants = MutableLiveData<List<User>>()
+    val participants: LiveData<List<User>> = _participants
+
+    private val _participantsDisplay = MutableLiveData<String>()
+    val participantsDisplay: LiveData<String> = _participantsDisplay
+
     init {
         loadChatRoom()
         loadMessages()
     }
 
     /**
-     * Load chat room details
+     * Load chat room details with real-time updates
      */
     private fun loadChatRoom() {
         if (chatRoomId.isEmpty()) {
@@ -56,15 +65,21 @@ class ChatDetailViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val result = chatRepository.getChatRoom(chatRoomId)
-            result.fold(
-                onSuccess = { room ->
-                    _chatRoom.value = room
-                },
-                onFailure = { e ->
+            chatRepository.getChatRoomFlow(chatRoomId)
+                .catch { e ->
                     _error.value = e.message ?: "Failed to load chat room"
                 }
-            )
+                .collect { result ->
+                    result.fold(
+                        onSuccess = { room ->
+                            _chatRoom.value = room
+                            loadParticipants(room)
+                        },
+                        onFailure = { e ->
+                            _error.value = e.message ?: "Failed to load chat room"
+                        }
+                    )
+                }
         }
     }
 
@@ -137,6 +152,73 @@ class ChatDetailViewModel @Inject constructor(
         viewModelScope.launch {
             chatRepository.markMessagesAsRead(chatRoomId, userId)
         }
+    }
+
+    /**
+     * Load participant information
+     */
+    private fun loadParticipants(room: ChatRoom) {
+        viewModelScope.launch {
+            val result = userRepository.getUsers(room.participants)
+            result.fold(
+                onSuccess = { users ->
+                    _participants.value = users
+                    _participantsDisplay.value = formatParticipantsDisplay(users)
+                },
+                onFailure = { e ->
+                    _error.value = e.message ?: "Failed to load participants"
+                }
+            )
+        }
+    }
+
+    /**
+     * Format participants display text
+     */
+    private fun formatParticipantsDisplay(users: List<User>): String {
+        return when {
+            users.size <= 2 -> "" // 1:1 DM은 표시 안 함
+            users.size <= 3 -> users.joinToString(", ") { it.displayName }
+            else -> {
+                val firstTwo = users.take(2).joinToString(", ") { it.displayName }
+                val remaining = users.size - 2
+                "$firstTwo 외 ${remaining}명"
+            }
+        }
+    }
+
+    /**
+     * Update chat room name (그룹 채팅만)
+     */
+    fun updateChatRoomName(newName: String) {
+        val room = _chatRoom.value ?: return
+
+        // 1:1 DM은 제목 변경 불가
+        if (room.participants.size <= 2) {
+            _error.value = "1:1 대화방은 제목을 변경할 수 없습니다"
+            return
+        }
+
+        if (newName.isBlank() || chatRoomId.isEmpty()) return
+
+        viewModelScope.launch {
+            val result = chatRepository.updateChatRoomName(chatRoomId, newName.trim())
+            result.fold(
+                onSuccess = {
+                    // Flow가 자동으로 _chatRoom 업데이트
+                },
+                onFailure = { e ->
+                    _error.value = e.message ?: "Failed to update chat room name"
+                }
+            )
+        }
+    }
+
+    /**
+     * 제목 편집 가능 여부 확인
+     */
+    fun canEditChatName(): Boolean {
+        return (_chatRoom.value?.participants?.size ?: 0) > 2
     }
 
     fun clearError() {

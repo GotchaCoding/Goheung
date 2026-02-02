@@ -1,0 +1,198 @@
+package com.example.goheung.data.repository
+
+import com.example.goheung.data.model.ChatRoom
+import com.example.goheung.data.model.Message
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Repository for chat operations with Firestore
+ * Provides real-time chat room and message data
+ */
+@Singleton
+class ChatRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
+
+    /**
+     * Get all chat rooms with real-time updates
+     */
+    fun getChatRooms(): Flow<Result<List<ChatRoom>>> = callbackFlow {
+        val listener = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val chatRooms = snapshot.toObjects(ChatRoom::class.java)
+                    trySend(Result.success(chatRooms))
+                }
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Get messages for a specific chat room with real-time updates
+     */
+    fun getMessages(chatRoomId: String): Flow<Result<List<Message>>> = callbackFlow {
+        val listener = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val messages = snapshot.toObjects(Message::class.java)
+                    trySend(Result.success(messages))
+                }
+            }
+
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Send a message to a chat room
+     */
+    suspend fun sendMessage(message: Message): Result<String> = try {
+        val docRef = firestore.collection(Message.COLLECTION_NAME)
+            .add(message)
+            .await()
+
+        // Update last message in chat room
+        updateChatRoomLastMessage(
+            chatRoomId = message.chatRoomId,
+            lastMessage = message.text,
+            senderId = message.senderId
+        )
+
+        Result.success(docRef.id)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Create a new chat room
+     */
+    suspend fun createChatRoom(chatRoom: ChatRoom): Result<String> = try {
+        val docRef = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .add(chatRoom)
+            .await()
+        Result.success(docRef.id)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Get a specific chat room
+     */
+    suspend fun getChatRoom(chatRoomId: String): Result<ChatRoom> = try {
+        val snapshot = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .document(chatRoomId)
+            .get()
+            .await()
+
+        val chatRoom = snapshot.toObject(ChatRoom::class.java)
+        if (chatRoom != null) {
+            Result.success(chatRoom)
+        } else {
+            Result.failure(Exception("Chat room not found"))
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Update last message info in chat room
+     */
+    private suspend fun updateChatRoomLastMessage(
+        chatRoomId: String,
+        lastMessage: String,
+        senderId: String
+    ) {
+        try {
+            firestore.collection(ChatRoom.COLLECTION_NAME)
+                .document(chatRoomId)
+                .update(
+                    mapOf(
+                        "lastMessage" to lastMessage,
+                        "lastMessageSenderId" to senderId,
+                        "lastMessageTimestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                    )
+                )
+                .await()
+        } catch (e: Exception) {
+            // Log error but don't fail the send operation
+        }
+    }
+
+    /**
+     * Mark messages as read
+     */
+    suspend fun markMessagesAsRead(chatRoomId: String, userId: String): Result<Unit> = try {
+        val messagesSnapshot = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .whereEqualTo("isRead", false)
+            .get()
+            .await()
+
+        val batch = firestore.batch()
+        messagesSnapshot.documents
+            .filter { it.getString("senderId") != userId }
+            .forEach { doc ->
+                batch.update(doc.reference, "isRead", true)
+            }
+
+        batch.commit().await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Find or create a direct chat between two users
+     */
+    suspend fun findOrCreateDirectChat(myUid: String, friendUid: String, chatName: String): Result<String> = try {
+        // Query for existing chat rooms containing both users
+        val existingChats = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .whereArrayContains("participants", myUid)
+            .get()
+            .await()
+
+        // Filter on client side for exact 2-person match
+        val directChat = existingChats.documents.firstOrNull { doc ->
+            val participants = doc.get("participants") as? List<*>
+            participants?.size == 2 && participants.contains(friendUid)
+        }
+
+        if (directChat != null) {
+            Result.success(directChat.id)
+        } else {
+            // Create new direct chat
+            val newChatRoom = ChatRoom(
+                name = chatName,
+                description = "1:1 채팅",
+                participants = listOf(myUid, friendUid),
+                createdBy = myUid
+            )
+            val docRef = firestore.collection(ChatRoom.COLLECTION_NAME)
+                .add(newChatRoom)
+                .await()
+            Result.success(docRef.id)
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}

@@ -1,5 +1,6 @@
 package com.example.goheung.presentation.chat
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -15,6 +16,10 @@ import java.util.Locale
 class ChatListAdapter(
     private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
 ) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, ChatListAdapter.ChatRoomViewHolder>(ChatRoomDiffCallback()) {
+
+    companion object {
+        private const val TAG = "ChatListAdapter"
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
         val binding = ItemChatRoomBinding.inflate(
@@ -38,6 +43,7 @@ class ChatListAdapter(
         private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         fun bind(item: ChatListViewModel.ChatRoomWithParticipants) {
+            Log.d(TAG, "bind: displayName='${item.displayName}', lastMessage='${item.chatRoom.lastMessage}'")
             binding.apply {
                 textViewChatRoomName.text = item.displayName
                 textViewLastMessage.text = item.chatRoom.lastMessage.ifEmpty { "No messages yet" }
@@ -53,6 +59,7 @@ class ChatListAdapter(
                     onChatRoomClick(item)
                 }
             }
+            Log.d(TAG, "bind: textViewChatRoomName.text='${binding.textViewChatRoomName.text}'")
         }
     }
 

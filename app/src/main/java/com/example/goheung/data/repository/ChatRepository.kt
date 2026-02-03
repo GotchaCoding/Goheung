@@ -1,5 +1,6 @@
 package com.example.goheung.data.repository
 
+import android.util.Log
 import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.data.model.Message
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,6 +20,9 @@ import javax.inject.Singleton
 class ChatRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
+    companion object {
+        private const val TAG = "ChatRepository"
+    }
 
     /**
      * Get chat rooms for a specific user with real-time updates
@@ -46,31 +50,48 @@ class ChatRepository @Inject constructor(
      * Get messages for a specific chat room with real-time updates
      */
     fun getMessages(chatRoomId: String): Flow<Result<List<Message>>> = callbackFlow {
+        Log.d(TAG, "getMessages: Setting up listener for chatRoomId=$chatRoomId")
         val listener = firestore.collection(Message.COLLECTION_NAME)
             .whereEqualTo("chatRoomId", chatRoomId)
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            // orderBy를 임시로 제거하여 인덱스 문제 확인
+            // .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "getMessages: Firestore error", error)
                     trySend(Result.failure(error))
                     return@addSnapshotListener
                 }
 
                 if (snapshot != null) {
+                    // 클라이언트 사이드에서 정렬
                     val messages = snapshot.toObjects(Message::class.java)
+                        .sortedBy { it.timestamp }
+                    Log.d(TAG, "getMessages: Received ${messages.size} messages from Firestore")
+                    messages.forEachIndexed { index, message ->
+                        Log.d(TAG, "  Message[$index]: id=${message.id}, text=${message.text}")
+                    }
                     trySend(Result.success(messages))
+                } else {
+                    Log.w(TAG, "getMessages: snapshot is null")
                 }
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getMessages: Removing listener for chatRoomId=$chatRoomId")
+            listener.remove()
+        }
     }
 
     /**
      * Send a message to a chat room
      */
     suspend fun sendMessage(message: Message): Result<String> = try {
+        Log.d(TAG, "sendMessage: Adding message to Firestore - chatRoomId=${message.chatRoomId}, text=${message.text}")
         val docRef = firestore.collection(Message.COLLECTION_NAME)
             .add(message)
             .await()
+
+        Log.d(TAG, "sendMessage: Message added with id=${docRef.id}")
 
         // Update last message in chat room
         updateChatRoomLastMessage(
@@ -81,6 +102,7 @@ class ChatRepository @Inject constructor(
 
         Result.success(docRef.id)
     } catch (e: Exception) {
+        Log.e(TAG, "sendMessage: Failed to send message", e)
         Result.failure(e)
     }
 

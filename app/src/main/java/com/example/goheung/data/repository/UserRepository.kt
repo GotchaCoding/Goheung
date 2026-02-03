@@ -1,5 +1,6 @@
 package com.example.goheung.data.repository
 
+import android.util.Log
 import com.example.goheung.data.model.User
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -13,6 +14,9 @@ import javax.inject.Singleton
 class UserRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
+    companion object {
+        private const val TAG = "UserRepository"
+    }
 
     private val usersCollection = firestore.collection(User.COLLECTION_NAME)
 
@@ -80,7 +84,9 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun getUsers(uids: List<String>): Result<List<User>> {
+        Log.d(TAG, "getUsers: Fetching ${uids.size} users - uids=$uids")
         if (uids.isEmpty()) {
+            Log.d(TAG, "getUsers: Empty uids list, returning empty")
             return Result.success(emptyList())
         }
 
@@ -88,15 +94,20 @@ class UserRepository @Inject constructor(
             val users = mutableListOf<User>()
 
             uids.chunked(10).forEach { chunk ->
+                Log.d(TAG, "getUsers: Querying chunk of ${chunk.size} users")
                 val snapshot = usersCollection
                     .whereIn("uid", chunk)
                     .get()
                     .await()
-                users.addAll(snapshot.toObjects(User::class.java))
+                val chunkUsers = snapshot.toObjects(User::class.java)
+                Log.d(TAG, "getUsers: Found ${chunkUsers.size} users in this chunk")
+                users.addAll(chunkUsers)
             }
 
+            Log.d(TAG, "getUsers: Total users fetched: ${users.size}")
             Result.success(users)
         } catch (e: Exception) {
+            Log.e(TAG, "getUsers: Failed to fetch users", e)
             Result.failure(e)
         }
     }

@@ -1,5 +1,6 @@
 package com.example.goheung.presentation.chat
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -20,6 +21,10 @@ class ChatListViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val authRepository: AuthRepository
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ChatListViewModel"
+    }
 
     data class ChatRoomWithParticipants(
         val chatRoom: ChatRoom,
@@ -47,12 +52,17 @@ class ChatListViewModel @Inject constructor(
     }
 
     private fun loadChatRooms() {
-        val myUid = authRepository.currentUser?.uid ?: return
+        val myUid = authRepository.currentUser?.uid ?: run {
+            Log.e(TAG, "loadChatRooms: currentUser is null")
+            return
+        }
 
+        Log.d(TAG, "loadChatRooms: Loading chat rooms for uid=$myUid")
         viewModelScope.launch {
             _loading.value = true
             chatRepository.getChatRooms(myUid)
                 .catch { e ->
+                    Log.e(TAG, "loadChatRooms: Error in flow", e)
                     _loading.value = false
                     _error.value = e.message ?: "Failed to load chat rooms"
                 }
@@ -60,10 +70,12 @@ class ChatListViewModel @Inject constructor(
                     _loading.value = false
                     result.fold(
                         onSuccess = { rooms ->
+                            Log.d(TAG, "loadChatRooms: Received ${rooms.size} chat rooms")
                             processChatRooms(rooms, myUid)
                             _error.value = null
                         },
                         onFailure = { e ->
+                            Log.e(TAG, "loadChatRooms: Failed", e)
                             _error.value = e.message ?: "Failed to load chat rooms"
                         }
                     )
@@ -72,35 +84,48 @@ class ChatListViewModel @Inject constructor(
     }
 
     private suspend fun processChatRooms(rooms: List<ChatRoom>, myUid: String) {
+        Log.d(TAG, "processChatRooms: Processing ${rooms.size} rooms")
         val allParticipantUids = rooms.flatMap { it.participants }.distinct()
+        Log.d(TAG, "processChatRooms: Found ${allParticipantUids.size} unique participants")
+
         val usersResult = userRepository.getUsers(allParticipantUids)
 
         usersResult.fold(
             onSuccess = { users ->
+                Log.d(TAG, "processChatRooms: Loaded ${users.size} users")
                 val userMap = users.associateBy { it.uid }
                 val roomsWithParticipants = rooms.map { room ->
                     val participants = room.participants.mapNotNull { userMap[it] }
                     val displayName = calculateDisplayName(room, participants, myUid)
+                    Log.d(TAG, "processChatRooms: Room ${room.id} -> displayName='$displayName'")
                     ChatRoomWithParticipants(room, participants, displayName)
                 }
 
                 val directMessages = roomsWithParticipants.filter { it.chatRoom.participants.size == 2 }
                 val groupMessages = roomsWithParticipants.filter { it.chatRoom.participants.size != 2 }
 
+                Log.d(TAG, "processChatRooms: DMs=${directMessages.size}, Groups=${groupMessages.size}")
                 _directChats.value = directMessages
                 _groupChats.value = groupMessages
             },
             onFailure = { e ->
+                Log.e(TAG, "processChatRooms: Failed to load users", e)
                 _error.value = e.message ?: "Failed to load participants"
             }
         )
     }
 
     private fun calculateDisplayName(room: ChatRoom, participants: List<User>, myUid: String): String {
-        return when (room.participants.size) {
+        Log.d(TAG, "calculateDisplayName: room.id=${room.id}, room.name='${room.name}', room.participants=${room.participants.size}")
+        Log.d(TAG, "  Loaded participants=${participants.size}: ${participants.map { "${it.displayName}(${it.uid})" }}")
+        Log.d(TAG, "  myUid=$myUid")
+
+        val result = when (room.participants.size) {
             2 -> {
                 // DM: 상대방 이름 표시
-                participants.firstOrNull { it.uid != myUid }?.displayName ?: "Unknown"
+                val other = participants.firstOrNull { it.uid != myUid }
+                Log.d(TAG, "  DM logic: other user = ${other?.displayName}(${other?.uid})")
+                other?.displayName ?: "Unknown User"
             }
             1 -> {
                 // 나만 있는 그룹: 방 이름 또는 내 이름
@@ -115,6 +140,8 @@ class ChatListViewModel @Inject constructor(
                 }
             }
         }
+        Log.d(TAG, "  → result='$result'")
+        return result
     }
 
     fun createChatRoom(name: String, description: String, userId: String) {

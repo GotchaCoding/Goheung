@@ -2,6 +2,7 @@ package com.example.goheung.presentation.chat
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +23,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ChatListFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "ChatListFragment"
+    }
 
     private var _binding: FragmentChatListBinding? = null
     private val binding get() = _binding!!
@@ -79,7 +84,12 @@ class ChatListFragment : Fragment() {
     }
 
     private fun setupObservers() {
+        Log.d(TAG, "setupObservers: Setting up observers")
         viewModel.directChats.observe(viewLifecycleOwner) { directChats ->
+            Log.d(TAG, "directChats observer: received ${directChats.size} items")
+            directChats.forEachIndexed { index, item ->
+                Log.d(TAG, "  DM[$index]: ${item.displayName}")
+            }
             directMessagesAdapter.submitList(directChats)
             binding.textViewDirectMessagesHeader.isVisible = directChats.isNotEmpty()
             binding.recyclerViewDirectMessages.isVisible = directChats.isNotEmpty()
@@ -87,6 +97,10 @@ class ChatListFragment : Fragment() {
         }
 
         viewModel.groupChats.observe(viewLifecycleOwner) { groupChats ->
+            Log.d(TAG, "groupChats observer: received ${groupChats.size} items")
+            groupChats.forEachIndexed { index, item ->
+                Log.d(TAG, "  Group[$index]: ${item.displayName}")
+            }
             groupChatsAdapter.submitList(groupChats)
             binding.textViewGroupChatsHeader.isVisible = groupChats.isNotEmpty()
             binding.recyclerViewGroupChats.isVisible = groupChats.isNotEmpty()

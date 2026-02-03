@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.data.model.Message
 import com.example.goheung.data.model.MessageType
@@ -56,30 +57,29 @@ class ChatDetailViewModel @Inject constructor(
     }
 
     /**
-     * Load chat room details with real-time updates
+     * Load chat room details
      */
     private fun loadChatRoom() {
         if (chatRoomId.isEmpty()) {
+            Log.e(TAG, "loadChatRoom: chatRoomId is empty")
             _error.value = "Invalid chat room ID"
             return
         }
 
+        Log.d(TAG, "loadChatRoom: Loading chat room for chatRoomId=$chatRoomId")
         viewModelScope.launch {
-            chatRepository.getChatRoomFlow(chatRoomId)
-                .catch { e ->
+            val result = chatRepository.getChatRoom(chatRoomId)
+            result.fold(
+                onSuccess = { room ->
+                    Log.d(TAG, "loadChatRoom: Success - name=${room.name}, participants=${room.participants.size}")
+                    _chatRoom.value = room
+                    loadParticipants(room)
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "loadChatRoom: Failed", e)
                     _error.value = e.message ?: "Failed to load chat room"
                 }
-                .collect { result ->
-                    result.fold(
-                        onSuccess = { room ->
-                            _chatRoom.value = room
-                            loadParticipants(room)
-                        },
-                        onFailure = { e ->
-                            _error.value = e.message ?: "Failed to load chat room"
-                        }
-                    )
-                }
+            )
         }
     }
 
@@ -87,12 +87,17 @@ class ChatDetailViewModel @Inject constructor(
      * Load messages with real-time updates
      */
     private fun loadMessages() {
-        if (chatRoomId.isEmpty()) return
+        if (chatRoomId.isEmpty()) {
+            Log.e(TAG, "loadMessages: chatRoomId is empty")
+            return
+        }
 
+        Log.d(TAG, "loadMessages: Starting to load messages for chatRoomId=$chatRoomId")
         viewModelScope.launch {
             _loading.value = true
             chatRepository.getMessages(chatRoomId)
                 .catch { e ->
+                    Log.e(TAG, "loadMessages: Error in flow", e)
                     _loading.value = false
                     _error.value = e.message ?: "Failed to load messages"
                 }
@@ -100,10 +105,12 @@ class ChatDetailViewModel @Inject constructor(
                     _loading.value = false
                     result.fold(
                         onSuccess = { msgs ->
+                            Log.d(TAG, "loadMessages: Received ${msgs.size} messages")
                             _messages.value = msgs
                             _error.value = null
                         },
                         onFailure = { e ->
+                            Log.e(TAG, "loadMessages: Failed", e)
                             _error.value = e.message ?: "Failed to load messages"
                         }
                     )
@@ -111,12 +118,20 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
+    companion object {
+        private const val TAG = "ChatDetailViewModel"
+    }
+
     /**
      * Send a text message
      */
     fun sendMessage(text: String, userId: String, userName: String) {
-        if (text.isBlank() || chatRoomId.isEmpty()) return
+        if (text.isBlank() || chatRoomId.isEmpty()) {
+            Log.e(TAG, "sendMessage: Invalid input - text.isBlank=${text.isBlank()}, chatRoomId=$chatRoomId")
+            return
+        }
 
+        Log.d(TAG, "sendMessage: Sending message to chatRoomId=$chatRoomId")
         viewModelScope.launch {
             _sendingMessage.value = true
 
@@ -132,11 +147,13 @@ class ChatDetailViewModel @Inject constructor(
             _sendingMessage.value = false
 
             result.fold(
-                onSuccess = {
+                onSuccess = { messageId ->
+                    Log.d(TAG, "sendMessage: Success - messageId=$messageId")
                     // Message sent successfully
                     // Real-time listener will automatically update the list
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "sendMessage: Failed", e)
                     _error.value = e.message ?: "Failed to send message"
                 }
             )
@@ -158,14 +175,22 @@ class ChatDetailViewModel @Inject constructor(
      * Load participant information
      */
     private fun loadParticipants(room: ChatRoom) {
+        Log.d(TAG, "loadParticipants: Loading participants for ${room.participants.size} users")
         viewModelScope.launch {
             val result = userRepository.getUsers(room.participants)
             result.fold(
                 onSuccess = { users ->
+                    Log.d(TAG, "loadParticipants: Success - loaded ${users.size} users")
+                    users.forEach { user ->
+                        Log.d(TAG, "  User: ${user.displayName} (${user.uid})")
+                    }
                     _participants.value = users
-                    _participantsDisplay.value = formatParticipantsDisplay(users)
+                    val displayText = formatParticipantsDisplay(users)
+                    Log.d(TAG, "loadParticipants: Display text = '$displayText'")
+                    _participantsDisplay.value = displayText
                 },
                 onFailure = { e ->
+                    Log.e(TAG, "loadParticipants: Failed to load users", e)
                     _error.value = e.message ?: "Failed to load participants"
                 }
             )
@@ -205,7 +230,8 @@ class ChatDetailViewModel @Inject constructor(
             val result = chatRepository.updateChatRoomName(chatRoomId, newName.trim())
             result.fold(
                 onSuccess = {
-                    // Flow가 자동으로 _chatRoom 업데이트
+                    // 변경 후 채팅방 정보 다시 로드
+                    loadChatRoom()
                 },
                 onFailure = { e ->
                     _error.value = e.message ?: "Failed to update chat room name"

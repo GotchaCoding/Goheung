@@ -223,6 +223,22 @@ class ChatRepository @Inject constructor(
     }
 
     /**
+     * Add participants to chat room
+     */
+    suspend fun addParticipants(chatRoomId: String, userIds: List<String>): Result<Unit> = try {
+        Log.d(TAG, "addParticipants: chatRoomId=$chatRoomId, userIds=$userIds")
+        firestore.collection(ChatRoom.COLLECTION_NAME)
+            .document(chatRoomId)
+            .update("participants", com.google.firebase.firestore.FieldValue.arrayUnion(*userIds.toTypedArray()))
+            .await()
+        Log.d(TAG, "addParticipants: Success")
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.e(TAG, "addParticipants: Failed", e)
+        Result.failure(e)
+    }
+
+    /**
      * Find or create a direct chat between two users
      */
     suspend fun findOrCreateDirectChat(myUid: String, friendUid: String, chatName: String): Result<String> = try {

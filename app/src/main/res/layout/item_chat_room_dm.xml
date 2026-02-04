@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- DM (Direct Message) 채팅방 아이템 레이아웃 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -14,6 +15,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <!-- 상대방 이름 (DM은 채팅방 이름 = 상대방 이름) -->
         <TextView
             android:id="@+id/textViewChatRoomName"
             android:layout_width="0dp"
@@ -22,11 +24,11 @@
             android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="Chat Room Name" />
+            tools:text="홍길동" />
 
+        <!-- 마지막 메시지 -->
         <TextView
             android:id="@+id/textViewLastMessage"
             android:layout_width="0dp"
@@ -41,6 +43,7 @@
             app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName"
             tools:text="Last message in the chat room" />
 
+        <!-- 시간 -->
         <TextView
             android:id="@+id/textViewTimestamp"
             android:layout_width="wrap_content"

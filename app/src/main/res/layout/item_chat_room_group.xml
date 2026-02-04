@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Group Chat 채팅방 아이템 레이아웃 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -14,6 +15,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
+        <!-- 채팅방 제목 -->
         <TextView
             android:id="@+id/textViewChatRoomName"
             android:layout_width="0dp"
@@ -22,11 +24,26 @@
             android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="Chat Room Name" />
+            tools:text="프로젝트 팀 채팅방" />
 
+        <!-- 참여자 정보 -->
+        <TextView
+            android:id="@+id/textViewParticipants"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/textSecondary"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName"
+            tools:text="홍길동, 김철수, 박영희 외 3명" />
+
+        <!-- 마지막 메시지 -->
         <TextView
             android:id="@+id/textViewLastMessage"
             android:layout_width="0dp"
@@ -38,9 +55,10 @@
             android:textSize="14sp"
             app:layout_constraintEnd_toStartOf="@id/textViewTimestamp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName"
+            app:layout_constraintTop_toBottomOf="@id/textViewParticipants"
             tools:text="Last message in the chat room" />
 
+        <!-- 시간 -->
         <TextView
             android:id="@+id/textViewTimestamp"
             android:layout_width="wrap_content"

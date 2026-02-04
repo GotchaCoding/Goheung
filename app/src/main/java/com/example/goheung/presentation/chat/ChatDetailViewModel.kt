@@ -118,10 +118,6 @@ class ChatDetailViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        private const val TAG = "ChatDetailViewModel"
-    }
-
     /**
      * Send a text message
      */
@@ -241,13 +237,50 @@ class ChatDetailViewModel @Inject constructor(
     }
 
     /**
+     * 그룹 채팅 여부 확인 (2명이 아니면 그룹)
+     */
+    fun isGroupChat(): Boolean {
+        return (_chatRoom.value?.participants?.size ?: 0) != 2
+    }
+
+    /**
      * 제목 편집 가능 여부 확인
      */
     fun canEditChatName(): Boolean {
-        return (_chatRoom.value?.participants?.size ?: 0) > 2
+        return (_chatRoom.value?.participants?.size ?: 0) != 2
+    }
+
+    /**
+     * 채팅방에 사용자 초대
+     */
+    fun inviteUsers(userIds: List<String>) {
+        if (userIds.isEmpty() || chatRoomId.isEmpty()) {
+            Log.w(TAG, "inviteUsers: Invalid parameters")
+            return
+        }
+
+        Log.d(TAG, "inviteUsers: Inviting ${userIds.size} users to chatRoomId=$chatRoomId")
+        viewModelScope.launch {
+            val result = chatRepository.addParticipants(chatRoomId, userIds)
+            result.fold(
+                onSuccess = {
+                    Log.d(TAG, "inviteUsers: Success")
+                    // 채팅방 정보 다시 로드하여 참여자 업데이트
+                    loadChatRoom()
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "inviteUsers: Failed", e)
+                    _error.value = e.message ?: "Failed to invite users"
+                }
+            )
+        }
     }
 
     fun clearError() {
         _error.value = null
+    }
+
+    companion object {
+        private const val TAG = "ChatDetailViewModel"
     }
 }

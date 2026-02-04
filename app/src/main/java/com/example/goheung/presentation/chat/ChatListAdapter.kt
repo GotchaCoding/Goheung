@@ -6,44 +6,76 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.example.goheung.databinding.ItemChatRoomBinding
+import com.example.goheung.databinding.ItemChatRoomDmBinding
+import com.example.goheung.databinding.ItemChatRoomGroupBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 /**
  * Adapter for displaying chat rooms list
+ * Supports different view types for DM and Group chats
  */
 class ChatListAdapter(
     private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
-) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, ChatListAdapter.ChatRoomViewHolder>(ChatRoomDiffCallback()) {
+) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, RecyclerView.ViewHolder>(ChatRoomDiffCallback()) {
 
     companion object {
         private const val TAG = "ChatListAdapter"
+        private const val VIEW_TYPE_DM = 1
+        private const val VIEW_TYPE_GROUP = 2
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
-        val binding = ItemChatRoomBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
-        return ChatRoomViewHolder(binding, onChatRoomClick)
+    override fun getItemViewType(position: Int): Int {
+        val item = getItem(position)
+        return if (item.chatRoom.participants.size == 2) {
+            VIEW_TYPE_DM
+        } else {
+            VIEW_TYPE_GROUP
+        }
     }
 
-    override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
-        holder.bind(getItem(position))
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return when (viewType) {
+            VIEW_TYPE_DM -> {
+                val binding = ItemChatRoomDmBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                DMViewHolder(binding, onChatRoomClick)
+            }
+            VIEW_TYPE_GROUP -> {
+                val binding = ItemChatRoomGroupBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                GroupViewHolder(binding, onChatRoomClick)
+            }
+            else -> throw IllegalArgumentException("Unknown view type: $viewType")
+        }
     }
 
-    class ChatRoomViewHolder(
-        private val binding: ItemChatRoomBinding,
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val item = getItem(position)
+        when (holder) {
+            is DMViewHolder -> holder.bind(item)
+            is GroupViewHolder -> holder.bind(item)
+        }
+    }
+
+    /**
+     * ViewHolder for DM (Direct Message)
+     */
+    class DMViewHolder(
+        private val binding: ItemChatRoomDmBinding,
         private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         fun bind(item: ChatListViewModel.ChatRoomWithParticipants) {
-            Log.d(TAG, "bind: displayName='${item.displayName}', lastMessage='${item.chatRoom.lastMessage}'")
+            Log.d(TAG, "DM bind: displayName='${item.displayName}', lastMessage='${item.chatRoom.lastMessage}'")
             binding.apply {
                 textViewChatRoomName.text = item.displayName
                 textViewLastMessage.text = item.chatRoom.lastMessage.ifEmpty { "No messages yet" }
@@ -59,7 +91,54 @@ class ChatListAdapter(
                     onChatRoomClick(item)
                 }
             }
-            Log.d(TAG, "bind: textViewChatRoomName.text='${binding.textViewChatRoomName.text}'")
+        }
+    }
+
+    /**
+     * ViewHolder for Group Chat
+     */
+    class GroupViewHolder(
+        private val binding: ItemChatRoomGroupBinding,
+        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+        fun bind(item: ChatListViewModel.ChatRoomWithParticipants) {
+            Log.d(TAG, "Group bind: displayName='${item.displayName}', participants=${item.participants.size}")
+            binding.apply {
+                // 그룹 채팅방은 채팅방 이름 표시
+                textViewChatRoomName.text = item.chatRoom.name.ifEmpty { item.displayName }
+
+                // 참여자 정보 표시
+                val participantsText = formatParticipants(item.participants)
+                textViewParticipants.text = participantsText
+
+                textViewLastMessage.text = item.chatRoom.lastMessage.ifEmpty { "No messages yet" }
+
+                item.chatRoom.lastMessageTimestamp?.let { timestamp ->
+                    val formattedTime = timeFormat.format(timestamp)
+                    textViewTimestamp.text = formattedTime
+                } ?: run {
+                    textViewTimestamp.text = ""
+                }
+
+                root.setOnClickListener {
+                    onChatRoomClick(item)
+                }
+            }
+        }
+
+        private fun formatParticipants(participants: List<com.example.goheung.data.model.User>): String {
+            return when {
+                participants.isEmpty() -> "참여자 없음"
+                participants.size <= 3 -> participants.joinToString(", ") { it.displayName }
+                else -> {
+                    val firstThree = participants.take(3).joinToString(", ") { it.displayName }
+                    val remaining = participants.size - 3
+                    "$firstThree 외 ${remaining}명"
+                }
+            }
         }
     }
 

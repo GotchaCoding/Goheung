@@ -20,7 +20,7 @@
             android:id="@+id/textViewChatRoomName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/textPrimary"
+            android:textColor="#1E444B"
             android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"

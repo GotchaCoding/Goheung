@@ -105,10 +105,16 @@ class ChatListAdapter(
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
         fun bind(item: ChatListViewModel.ChatRoomWithParticipants) {
-            Log.d(TAG, "Group bind: displayName='${item.displayName}', participants=${item.participants.size}")
+            Log.d(TAG, "Group bind: displayName='${item.displayName}', chatRoomName='${item.chatRoom.name}', participants=${item.participants.size}")
             binding.apply {
-                // 그룹 채팅방은 채팅방 이름 표시
-                textViewChatRoomName.text = item.chatRoom.name.ifEmpty { item.displayName }
+                // 그룹 채팅방은 이미 계산된 displayName 사용 (chatRoom.name이 우선)
+                textViewChatRoomName.text = item.displayName
+                textViewChatRoomName.post {
+                    Log.d(TAG, "Group bind: textViewChatRoomName - text='${textViewChatRoomName.text}', " +
+                            "visibility=${textViewChatRoomName.visibility}, " +
+                            "width=${textViewChatRoomName.width}, height=${textViewChatRoomName.height}, " +
+                            "textColor=${textViewChatRoomName.currentTextColor}")
+                }
 
                 // 참여자 정보 표시
                 val participantsText = formatParticipants(item.participants)

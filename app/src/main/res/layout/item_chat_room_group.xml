@@ -10,67 +10,66 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="2dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- 채팅방 제목 -->
-        <TextView
-            android:id="@+id/textViewChatRoomName"
-            android:layout_width="0dp"
+        <!-- 제목과 시간 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/textPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="프로젝트 팀 채팅방" />
+            android:orientation="horizontal">
+
+            <!-- 채팅방 제목 -->
+            <TextView
+                android:id="@+id/textViewChatRoomName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="#0D3145"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="프로젝트 팀 채팅방" />
+
+            <!-- 시간 -->
+            <TextView
+                android:id="@+id/textViewTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/textHint"
+                android:textSize="12sp"
+                tools:text="12:30" />
+        </LinearLayout>
 
         <!-- 참여자 정보 -->
         <TextView
             android:id="@+id/textViewParticipants"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="@color/textSecondary"
             android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName"
             tools:text="홍길동, 김철수, 박영희 외 3명" />
 
         <!-- 마지막 메시지 -->
         <TextView
             android:id="@+id/textViewLastMessage"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="2"
             android:textColor="@color/textSecondary"
             android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/textViewTimestamp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/textViewParticipants"
             tools:text="Last message in the chat room" />
 
-        <!-- 시간 -->
-        <TextView
-            android:id="@+id/textViewTimestamp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/textHint"
-            android:textSize="12sp"
-            app:layout_constraintBottom_toBottomOf="@id/textViewLastMessage"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/textViewLastMessage"
-            tools:text="12:30" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

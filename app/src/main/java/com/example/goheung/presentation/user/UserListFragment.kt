@@ -72,13 +72,13 @@ class UserListFragment : Fragment() {
             }
         }
 
-        viewModel.navigateToChatDetail.observe(viewLifecycleOwner) { chatRoomId ->
-            chatRoomId?.let {
+        viewModel.navigateToChatDetail.observe(viewLifecycleOwner) { pair ->
+            pair?.let { (chatRoomId, chatRoomName) ->
                 (activity as? BottomNavController)?.hideBottomNav()
                 parentFragmentManager.commit {
                     replace(
                         R.id.fragment_container,
-                        ChatDetailFragment.newInstance(chatRoomId, "")
+                        ChatDetailFragment.newInstance(chatRoomId, chatRoomName)
                     )
                     addToBackStack(null)
                 }

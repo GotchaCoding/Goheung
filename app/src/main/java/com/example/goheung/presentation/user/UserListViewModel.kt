@@ -28,8 +28,8 @@ class UserListViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    private val _navigateToChatDetail = MutableLiveData<String?>()
-    val navigateToChatDetail: LiveData<String?> = _navigateToChatDetail
+    private val _navigateToChatDetail = MutableLiveData<Pair<String, String>?>()
+    val navigateToChatDetail: LiveData<Pair<String, String>?> = _navigateToChatDetail
 
     init {
         loadUsers()
@@ -59,7 +59,7 @@ class UserListViewModel @Inject constructor(
             _loading.value = false
 
             result.onSuccess { chatRoomId ->
-                _navigateToChatDetail.value = chatRoomId
+                _navigateToChatDetail.value = Pair(chatRoomId, user.displayName)
             }.onFailure { e ->
                 _error.value = e.message
             }

@@ -237,13 +237,29 @@ class ChatDetailFragment : Fragment() {
                                 .filterIndexed { index, _ -> selectedUsers[index] }
                                 .map { it.uid }
 
-                            if (invitedUserIds.isNotEmpty()) {
-                                viewModel.inviteUsers(invitedUserIds)
-                                Toast.makeText(
-                                    requireContext(),
-                                    "${invitedUserIds.size}명을 초대했습니다",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                            when {
+                                invitedUserIds.isEmpty() -> {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "최소 1명 이상 선택해주세요",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                invitedUserIds.size == 1 -> {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "그룹 채팅에는 최소 2명 이상 초대해야 합니다",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                else -> {
+                                    viewModel.inviteUsers(invitedUserIds)
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "${invitedUserIds.size}명을 초대했습니다",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                         .setNegativeButton(R.string.cancel, null)

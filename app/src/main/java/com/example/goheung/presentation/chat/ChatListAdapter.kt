@@ -16,7 +16,9 @@ import java.util.Locale
  * Supports different view types for DM and Group chats
  */
 class ChatListAdapter(
-    private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
+    private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
+    private val onFavoriteClick: (String) -> Unit,
+    private val currentUserId: String
 ) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, RecyclerView.ViewHolder>(ChatRoomDiffCallback()) {
 
     companion object {
@@ -42,7 +44,7 @@ class ChatListAdapter(
                     parent,
                     false
                 )
-                DMViewHolder(binding, onChatRoomClick)
+                DMViewHolder(binding, onChatRoomClick, onFavoriteClick, currentUserId)
             }
             VIEW_TYPE_GROUP -> {
                 val binding = ItemChatRoomGroupBinding.inflate(
@@ -50,7 +52,7 @@ class ChatListAdapter(
                     parent,
                     false
                 )
-                GroupViewHolder(binding, onChatRoomClick)
+                GroupViewHolder(binding, onChatRoomClick, onFavoriteClick, currentUserId)
             }
             else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
@@ -58,10 +60,19 @@ class ChatListAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position)
+        Log.d(TAG, "onBindViewHolder: position=$position, displayName='${item.displayName}', id=${item.chatRoom.id}")
         when (holder) {
             is DMViewHolder -> holder.bind(item)
             is GroupViewHolder -> holder.bind(item)
         }
+    }
+
+    override fun submitList(list: List<ChatListViewModel.ChatRoomWithParticipants>?) {
+        Log.d(TAG, "submitList: Submitting ${list?.size ?: 0} items")
+        list?.forEachIndexed { index, item ->
+            Log.d(TAG, "  Item[$index]: ${item.displayName} (${item.chatRoom.id})")
+        }
+        super.submitList(list)
     }
 
     /**
@@ -69,7 +80,9 @@ class ChatListAdapter(
      */
     class DMViewHolder(
         private val binding: ItemChatRoomDmBinding,
-        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
+        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
+        private val onFavoriteClick: (String) -> Unit,
+        private val currentUserId: String
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -87,6 +100,17 @@ class ChatListAdapter(
                     textViewTimestamp.text = ""
                 }
 
+                // 즐겨찾기 아이콘 설정
+                val isFavorite = item.chatRoom.isFavoriteBy(currentUserId)
+                imageViewFavorite.setImageResource(
+                    if (isFavorite) android.R.drawable.star_big_on
+                    else android.R.drawable.star_big_off
+                )
+
+                imageViewFavorite.setOnClickListener {
+                    onFavoriteClick(item.chatRoom.id)
+                }
+
                 root.setOnClickListener {
                     onChatRoomClick(item)
                 }
@@ -99,7 +123,9 @@ class ChatListAdapter(
      */
     class GroupViewHolder(
         private val binding: ItemChatRoomGroupBinding,
-        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit
+        private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
+        private val onFavoriteClick: (String) -> Unit,
+        private val currentUserId: String
     ) : RecyclerView.ViewHolder(binding.root) {
 
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -109,12 +135,6 @@ class ChatListAdapter(
             binding.apply {
                 // 그룹 채팅방은 이미 계산된 displayName 사용 (chatRoom.name이 우선)
                 textViewChatRoomName.text = item.displayName
-                textViewChatRoomName.post {
-                    Log.d(TAG, "Group bind: textViewChatRoomName - text='${textViewChatRoomName.text}', " +
-                            "visibility=${textViewChatRoomName.visibility}, " +
-                            "width=${textViewChatRoomName.width}, height=${textViewChatRoomName.height}, " +
-                            "textColor=${textViewChatRoomName.currentTextColor}")
-                }
 
                 // 참여자 정보 표시
                 val participantsText = formatParticipants(item.participants)
@@ -127,6 +147,17 @@ class ChatListAdapter(
                     textViewTimestamp.text = formattedTime
                 } ?: run {
                     textViewTimestamp.text = ""
+                }
+
+                // 즐겨찾기 아이콘 설정
+                val isFavorite = item.chatRoom.isFavoriteBy(currentUserId)
+                imageViewFavorite.setImageResource(
+                    if (isFavorite) android.R.drawable.star_big_on
+                    else android.R.drawable.star_big_off
+                )
+
+                imageViewFavorite.setOnClickListener {
+                    onFavoriteClick(item.chatRoom.id)
                 }
 
                 root.setOnClickListener {

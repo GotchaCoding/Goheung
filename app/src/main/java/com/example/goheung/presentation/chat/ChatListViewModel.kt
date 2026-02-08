@@ -101,8 +101,18 @@ class ChatListViewModel @Inject constructor(
                     ChatRoomWithParticipants(room, participants, displayName)
                 }
 
-                val directMessages = roomsWithParticipants.filter { it.chatRoom.participants.size == 2 }
-                val groupMessages = roomsWithParticipants.filter { it.chatRoom.participants.size != 2 }
+                val directMessages = roomsWithParticipants
+                    .filter { it.chatRoom.participants.size == 2 }
+                    .sortedWith(
+                        compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
+                            .thenByDescending { it.chatRoom.lastMessageTimestamp }
+                    )
+                val groupMessages = roomsWithParticipants
+                    .filter { it.chatRoom.participants.size != 2 }
+                    .sortedWith(
+                        compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
+                            .thenByDescending { it.chatRoom.lastMessageTimestamp }
+                    )
 
                 Log.d(TAG, "processChatRooms: DMs=${directMessages.size}, Groups=${groupMessages.size}")
                 _directChats.value = directMessages
@@ -170,6 +180,17 @@ class ChatListViewModel @Inject constructor(
 
     fun onNavigatedToCreatedRoom() {
         _createdChatRoom.value = null
+    }
+
+    fun toggleFavorite(chatRoomId: String) {
+        val myUid = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val result = chatRepository.toggleFavorite(chatRoomId, myUid)
+            result.onFailure { e ->
+                _error.value = e.message ?: "즐겨찾기 설정 실패"
+            }
+            // 즐겨찾기 변경 후 자동으로 리스트 업데이트됨 (실시간 리스너)
+        }
     }
 
     fun clearError() {

@@ -272,4 +272,36 @@ class ChatRepository @Inject constructor(
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+    /**
+     * Toggle favorite status for a chat room
+     */
+    suspend fun toggleFavorite(chatRoomId: String, userId: String): Result<Unit> = try {
+        Log.d(TAG, "toggleFavorite: chatRoomId=$chatRoomId, userId=$userId")
+        val docRef = firestore.collection(ChatRoom.COLLECTION_NAME).document(chatRoomId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val favoriteBy = (snapshot.get("favoriteBy") as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+
+            Log.d(TAG, "toggleFavorite: Current favoriteBy=$favoriteBy")
+
+            val newFavoriteBy = if (userId in favoriteBy) {
+                // Remove from favorites
+                favoriteBy - userId
+            } else {
+                // Add to favorites
+                favoriteBy + userId
+            }
+
+            Log.d(TAG, "toggleFavorite: New favoriteBy=$newFavoriteBy")
+            transaction.update(docRef, "favoriteBy", newFavoriteBy)
+        }.await()
+
+        Log.d(TAG, "toggleFavorite: Success")
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.e(TAG, "toggleFavorite: Failed", e)
+        Result.failure(e)
+    }
 }

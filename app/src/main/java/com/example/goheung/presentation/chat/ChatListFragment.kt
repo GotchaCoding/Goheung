@@ -58,13 +58,25 @@ class ChatListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        directMessagesAdapter = ChatListAdapter { item ->
-            navigateToChatDetail(item.chatRoom.id, item.displayName)
-        }
+        directMessagesAdapter = ChatListAdapter(
+            onChatRoomClick = { item ->
+                navigateToChatDetail(item.chatRoom.id, item.displayName)
+            },
+            onFavoriteClick = { chatRoomId ->
+                viewModel.toggleFavorite(chatRoomId)
+            },
+            currentUserId = currentUserId
+        )
 
-        groupChatsAdapter = ChatListAdapter { item ->
-            navigateToChatDetail(item.chatRoom.id, item.displayName)
-        }
+        groupChatsAdapter = ChatListAdapter(
+            onChatRoomClick = { item ->
+                navigateToChatDetail(item.chatRoom.id, item.displayName)
+            },
+            onFavoriteClick = { chatRoomId ->
+                viewModel.toggleFavorite(chatRoomId)
+            },
+            currentUserId = currentUserId
+        )
 
         binding.recyclerViewDirectMessages.apply {
             layoutManager = LinearLayoutManager(requireContext())

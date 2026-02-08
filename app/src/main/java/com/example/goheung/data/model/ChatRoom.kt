@@ -20,9 +20,12 @@ data class ChatRoom(
     val lastMessageTimestamp: Date? = null,
     @ServerTimestamp
     val createdAt: Date? = null,
-    val createdBy: String = ""
+    val createdBy: String = "",
+    val favoriteBy: List<String> = emptyList() // 즐겨찾기한 사용자 UID 목록
 ) {
     companion object {
         const val COLLECTION_NAME = "chatRooms"
     }
+
+    fun isFavoriteBy(userId: String): Boolean = userId in favoriteBy
 }

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
 import com.example.goheung.data.model.ChatRoom
+import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.data.model.Message
 import com.example.goheung.data.model.MessageType
 import com.example.goheung.data.model.User
@@ -215,7 +216,7 @@ class ChatDetailViewModel @Inject constructor(
         val room = _chatRoom.value ?: return
 
         // 1:1 DM은 제목 변경 불가
-        if (room.participants.size <= 2) {
+        if (room.type == ChatRoomType.DM) {
             _error.value = "1:1 대화방은 제목을 변경할 수 없습니다"
             return
         }
@@ -237,17 +238,17 @@ class ChatDetailViewModel @Inject constructor(
     }
 
     /**
-     * 그룹 채팅 여부 확인 (2명이 아니면 그룹)
+     * 그룹 채팅 여부 확인
      */
     fun isGroupChat(): Boolean {
-        return (_chatRoom.value?.participants?.size ?: 0) != 2
+        return _chatRoom.value?.type == ChatRoomType.GROUP
     }
 
     /**
      * 제목 편집 가능 여부 확인
      */
     fun canEditChatName(): Boolean {
-        return (_chatRoom.value?.participants?.size ?: 0) != 2
+        return _chatRoom.value?.type == ChatRoomType.GROUP
     }
 
     /**
@@ -261,10 +262,28 @@ class ChatDetailViewModel @Inject constructor(
 
         Log.d(TAG, "inviteUsers: Inviting ${userIds.size} users to chatRoomId=$chatRoomId")
         viewModelScope.launch {
-            val result = chatRepository.addParticipants(chatRoomId, userIds)
-            result.fold(
+            // 참여자 추가
+            val addResult = chatRepository.addParticipants(chatRoomId, userIds)
+            addResult.fold(
                 onSuccess = {
                     Log.d(TAG, "inviteUsers: Success")
+
+                    // 초대된 사용자들의 정보 가져오기
+                    val usersResult = userRepository.getUsers(userIds)
+                    usersResult.fold(
+                        onSuccess = { users ->
+                            // 각 사용자에 대해 입장 시스템 메시지 추가
+                            users.forEach { user ->
+                                viewModelScope.launch {
+                                    chatRepository.addJoinMessage(chatRoomId, user.displayName)
+                                }
+                            }
+                        },
+                        onFailure = { e ->
+                            Log.w(TAG, "inviteUsers: Failed to get user names", e)
+                        }
+                    )
+
                     // 채팅방 정보 다시 로드하여 참여자 업데이트
                     loadChatRoom()
                 },

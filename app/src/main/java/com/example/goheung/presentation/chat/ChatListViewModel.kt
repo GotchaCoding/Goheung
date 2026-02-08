@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.goheung.data.model.ChatRoom
+import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.data.model.User
 import com.example.goheung.data.repository.AuthRepository
 import com.example.goheung.data.repository.ChatRepository
@@ -85,7 +86,12 @@ class ChatListViewModel @Inject constructor(
 
     private suspend fun processChatRooms(rooms: List<ChatRoom>, myUid: String) {
         Log.d(TAG, "processChatRooms: Processing ${rooms.size} rooms")
-        val allParticipantUids = rooms.flatMap { it.participants }.distinct()
+
+        // hiddenBy로 필터링 (숨긴 채팅방 제외)
+        val visibleRooms = rooms.filter { !it.isHiddenBy(myUid) }
+        Log.d(TAG, "processChatRooms: Visible rooms after filtering: ${visibleRooms.size}")
+
+        val allParticipantUids = visibleRooms.flatMap { it.participants }.distinct()
         Log.d(TAG, "processChatRooms: Found ${allParticipantUids.size} unique participants")
 
         val usersResult = userRepository.getUsers(allParticipantUids)
@@ -94,7 +100,7 @@ class ChatListViewModel @Inject constructor(
             onSuccess = { users ->
                 Log.d(TAG, "processChatRooms: Loaded ${users.size} users")
                 val userMap = users.associateBy { it.uid }
-                val roomsWithParticipants = rooms.map { room ->
+                val roomsWithParticipants = visibleRooms.map { room ->
                     val participants = room.participants.mapNotNull { userMap[it] }
                     val displayName = calculateDisplayName(room, participants, myUid)
                     Log.d(TAG, "processChatRooms: Room ${room.id} -> displayName='$displayName'")
@@ -102,13 +108,13 @@ class ChatListViewModel @Inject constructor(
                 }
 
                 val directMessages = roomsWithParticipants
-                    .filter { it.chatRoom.participants.size == 2 }
+                    .filter { it.chatRoom.type == ChatRoomType.DM }
                     .sortedWith(
                         compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
                             .thenByDescending { it.chatRoom.lastMessageTimestamp }
                     )
                 val groupMessages = roomsWithParticipants
-                    .filter { it.chatRoom.participants.size != 2 }
+                    .filter { it.chatRoom.type == ChatRoomType.GROUP }
                     .sortedWith(
                         compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
                             .thenByDescending { it.chatRoom.lastMessageTimestamp }
@@ -126,27 +132,25 @@ class ChatListViewModel @Inject constructor(
     }
 
     private fun calculateDisplayName(room: ChatRoom, participants: List<User>, myUid: String): String {
-        Log.d(TAG, "calculateDisplayName: room.id=${room.id}, room.name='${room.name}', room.participants=${room.participants.size}")
+        Log.d(TAG, "calculateDisplayName: room.id=${room.id}, room.name='${room.name}', room.type=${room.type}, room.participants=${room.participants.size}")
         Log.d(TAG, "  Loaded participants=${participants.size}: ${participants.map { "${it.displayName}(${it.uid})" }}")
         Log.d(TAG, "  myUid=$myUid")
 
-        val result = when (room.participants.size) {
-            2 -> {
-                // DM: 상대방 이름 표시
+        val result = when (room.type) {
+            ChatRoomType.DM -> {
+                // DM: 상대방 이름 표시 (participants에서 나를 제외한 사람)
                 val other = participants.firstOrNull { it.uid != myUid }
                 Log.d(TAG, "  DM logic: other user = ${other?.displayName}(${other?.uid})")
-                other?.displayName ?: "Unknown User"
+                other?.displayName ?: room.name.ifEmpty { "Unknown User" }
             }
-            1 -> {
-                // 나만 있는 그룹: 방 이름 또는 내 이름
+            ChatRoomType.GROUP -> {
+                // 그룹: 방 이름 우선, 없으면 참여자 나열
                 room.name.ifEmpty {
-                    participants.firstOrNull()?.displayName ?: "Group Chat"
-                }
-            }
-            else -> {
-                // 그룹: 방 이름 또는 참여자 나열
-                room.name.ifEmpty {
-                    participants.joinToString(", ") { it.displayName }
+                    if (participants.isEmpty()) {
+                        "Empty Group"
+                    } else {
+                        participants.joinToString(", ") { it.displayName }
+                    }
                 }
             }
         }
@@ -161,7 +165,8 @@ class ChatListViewModel @Inject constructor(
                 name = name,
                 description = description,
                 participants = listOf(userId),
-                createdBy = userId
+                createdBy = userId,
+                type = ChatRoomType.GROUP
             )
 
             val result = chatRepository.createChatRoom(chatRoom)
@@ -195,5 +200,29 @@ class ChatListViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * 채팅방 나가기
+     * DM: participants에서 제거 (상대방에게는 여전히 보임, 메시지 오면 다시 나타남)
+     * GROUP: participants에서 제거 + 시스템 메시지 추가
+     */
+    fun leaveChatRoom(chatRoomId: String, chatRoomType: ChatRoomType) {
+        val myUid = authRepository.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            val userResult = userRepository.getUser(myUid)
+            userResult.fold(
+                onSuccess = { user ->
+                    val leaveResult = chatRepository.leaveChatRoom(chatRoomId, myUid, user.displayName)
+                    leaveResult.onFailure { e ->
+                        _error.value = e.message ?: "채팅방 나가기 실패"
+                    }
+                },
+                onFailure = { e ->
+                    _error.value = e.message ?: "사용자 정보 로드 실패"
+                }
+            )
+        }
     }
 }

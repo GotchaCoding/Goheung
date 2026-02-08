@@ -65,6 +65,10 @@ class ChatListFragment : Fragment() {
             onFavoriteClick = { chatRoomId ->
                 viewModel.toggleFavorite(chatRoomId)
             },
+            onChatRoomLongClick = { item ->
+                showLeaveChatRoomDialog(item)
+                true
+            },
             currentUserId = currentUserId
         )
 
@@ -74,6 +78,10 @@ class ChatListFragment : Fragment() {
             },
             onFavoriteClick = { chatRoomId ->
                 viewModel.toggleFavorite(chatRoomId)
+            },
+            onChatRoomLongClick = { item ->
+                showLeaveChatRoomDialog(item)
+                true
             },
             currentUserId = currentUserId
         )
@@ -168,6 +176,23 @@ class ChatListFragment : Fragment() {
                         userId = currentUserId
                     )
                 }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showLeaveChatRoomDialog(item: ChatListViewModel.ChatRoomWithParticipants) {
+        val message = if (item.chatRoom.isGroup()) {
+            "채팅방을 나가시겠습니까?\n나가기 시 대화 내용이 삭제되고 채팅 목록에서 삭제됩니다."
+        } else {
+            "채팅방을 나가시겠습니까?\n채팅방은 목록에서 삭제되지만 상대방이 메시지를 보내면 다시 나타납니다."
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("채팅방 나가기")
+            .setMessage(message)
+            .setPositiveButton("나가기") { _, _ ->
+                viewModel.leaveChatRoom(item.chatRoom.id, item.chatRoom.type)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()

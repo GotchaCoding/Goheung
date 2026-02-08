@@ -28,5 +28,6 @@ data class Message(
 enum class MessageType {
     TEXT,
     IMAGE,
-    FILE
+    FILE,
+    SYSTEM  // 시스템 메시지 (입장, 퇴장 등)
 }

@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.databinding.ItemChatRoomDmBinding
 import com.example.goheung.databinding.ItemChatRoomGroupBinding
 import java.text.SimpleDateFormat
@@ -18,6 +19,7 @@ import java.util.Locale
 class ChatListAdapter(
     private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
     private val onFavoriteClick: (String) -> Unit,
+    private val onChatRoomLongClick: (ChatListViewModel.ChatRoomWithParticipants) -> Boolean,
     private val currentUserId: String
 ) : ListAdapter<ChatListViewModel.ChatRoomWithParticipants, RecyclerView.ViewHolder>(ChatRoomDiffCallback()) {
 
@@ -29,7 +31,7 @@ class ChatListAdapter(
 
     override fun getItemViewType(position: Int): Int {
         val item = getItem(position)
-        return if (item.chatRoom.participants.size == 2) {
+        return if (item.chatRoom.type == ChatRoomType.DM) {
             VIEW_TYPE_DM
         } else {
             VIEW_TYPE_GROUP
@@ -44,7 +46,7 @@ class ChatListAdapter(
                     parent,
                     false
                 )
-                DMViewHolder(binding, onChatRoomClick, onFavoriteClick, currentUserId)
+                DMViewHolder(binding, onChatRoomClick, onFavoriteClick, onChatRoomLongClick, currentUserId)
             }
             VIEW_TYPE_GROUP -> {
                 val binding = ItemChatRoomGroupBinding.inflate(
@@ -52,7 +54,7 @@ class ChatListAdapter(
                     parent,
                     false
                 )
-                GroupViewHolder(binding, onChatRoomClick, onFavoriteClick, currentUserId)
+                GroupViewHolder(binding, onChatRoomClick, onFavoriteClick, onChatRoomLongClick, currentUserId)
             }
             else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
@@ -82,6 +84,7 @@ class ChatListAdapter(
         private val binding: ItemChatRoomDmBinding,
         private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
         private val onFavoriteClick: (String) -> Unit,
+        private val onChatRoomLongClick: (ChatListViewModel.ChatRoomWithParticipants) -> Boolean,
         private val currentUserId: String
     ) : RecyclerView.ViewHolder(binding.root) {
 
@@ -114,6 +117,10 @@ class ChatListAdapter(
                 root.setOnClickListener {
                     onChatRoomClick(item)
                 }
+
+                root.setOnLongClickListener {
+                    onChatRoomLongClick(item)
+                }
             }
         }
     }
@@ -125,6 +132,7 @@ class ChatListAdapter(
         private val binding: ItemChatRoomGroupBinding,
         private val onChatRoomClick: (ChatListViewModel.ChatRoomWithParticipants) -> Unit,
         private val onFavoriteClick: (String) -> Unit,
+        private val onChatRoomLongClick: (ChatListViewModel.ChatRoomWithParticipants) -> Boolean,
         private val currentUserId: String
     ) : RecyclerView.ViewHolder(binding.root) {
 
@@ -162,6 +170,10 @@ class ChatListAdapter(
 
                 root.setOnClickListener {
                     onChatRoomClick(item)
+                }
+
+                root.setOnLongClickListener {
+                    onChatRoomLongClick(item)
                 }
             }
         }

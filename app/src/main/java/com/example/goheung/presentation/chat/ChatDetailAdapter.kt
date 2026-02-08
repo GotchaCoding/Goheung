@@ -6,8 +6,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.goheung.data.model.Message
+import com.example.goheung.data.model.MessageType
 import com.example.goheung.databinding.ItemMessageReceivedBinding
 import com.example.goheung.databinding.ItemMessageSentBinding
+import com.example.goheung.databinding.ItemMessageSystemBinding
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -22,14 +24,15 @@ class ChatDetailAdapter(
     companion object {
         private const val VIEW_TYPE_SENT = 1
         private const val VIEW_TYPE_RECEIVED = 2
+        private const val VIEW_TYPE_SYSTEM = 3
     }
 
     override fun getItemViewType(position: Int): Int {
         val message = getItem(position)
-        return if (message.senderId == currentUserId) {
-            VIEW_TYPE_SENT
-        } else {
-            VIEW_TYPE_RECEIVED
+        return when {
+            message.type == MessageType.SYSTEM -> VIEW_TYPE_SYSTEM
+            message.senderId == currentUserId -> VIEW_TYPE_SENT
+            else -> VIEW_TYPE_RECEIVED
         }
     }
 
@@ -51,6 +54,14 @@ class ChatDetailAdapter(
                 )
                 ReceivedMessageViewHolder(binding)
             }
+            VIEW_TYPE_SYSTEM -> {
+                val binding = ItemMessageSystemBinding.inflate(
+                    LayoutInflater.from(parent.context),
+                    parent,
+                    false
+                )
+                SystemMessageViewHolder(binding)
+            }
             else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
     }
@@ -60,6 +71,7 @@ class ChatDetailAdapter(
         when (holder) {
             is SentMessageViewHolder -> holder.bind(message)
             is ReceivedMessageViewHolder -> holder.bind(message)
+            is SystemMessageViewHolder -> holder.bind(message)
         }
     }
 
@@ -101,6 +113,15 @@ class ChatDetailAdapter(
                     textViewTimestamp.text = ""
                 }
             }
+        }
+    }
+
+    class SystemMessageViewHolder(
+        private val binding: ItemMessageSystemBinding
+    ) : RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(message: Message) {
+            binding.textViewSystemMessage.text = message.text
         }
     }
 

@@ -2,7 +2,9 @@ package com.example.goheung.data.repository
 
 import android.util.Log
 import com.example.goheung.data.model.ChatRoom
+import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.data.model.Message
+import com.example.goheung.data.model.MessageType
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -99,6 +101,9 @@ class ChatRepository @Inject constructor(
             lastMessage = message.text,
             senderId = message.senderId
         )
+
+        // 메시지 전송 시 hiddenBy 초기화 (숨겼던 사용자에게 다시 보임)
+        unhideChatRoom(message.chatRoomId)
 
         Result.success(docRef.id)
     } catch (e: Exception) {
@@ -248,10 +253,11 @@ class ChatRepository @Inject constructor(
             .get()
             .await()
 
-        // Filter on client side for exact 2-person match
+        // Filter on client side for DM type with exact 2-person match
         val directChat = existingChats.documents.firstOrNull { doc ->
             val participants = doc.get("participants") as? List<*>
-            participants?.size == 2 && participants.contains(friendUid)
+            val type = doc.getString("type")?.let { ChatRoomType.valueOf(it) } ?: ChatRoomType.GROUP
+            type == ChatRoomType.DM && participants?.size == 2 && participants.contains(friendUid)
         }
 
         if (directChat != null) {
@@ -262,7 +268,8 @@ class ChatRepository @Inject constructor(
                 name = chatName,
                 description = "1:1 채팅",
                 participants = listOf(myUid, friendUid),
-                createdBy = myUid
+                createdBy = myUid,
+                type = ChatRoomType.DM
             )
             val docRef = firestore.collection(ChatRoom.COLLECTION_NAME)
                 .add(newChatRoom)
@@ -303,5 +310,95 @@ class ChatRepository @Inject constructor(
     } catch (e: Exception) {
         Log.e(TAG, "toggleFavorite: Failed", e)
         Result.failure(e)
+    }
+
+    /**
+     * Leave a chat room
+     * DM: participants 유지 + hiddenBy에 추가 (메시지 오면 다시 나타남)
+     * GROUP: participants에서 제거 + 시스템 메시지
+     */
+    suspend fun leaveChatRoom(chatRoomId: String, userId: String, userName: String): Result<Unit> = try {
+        Log.d(TAG, "leaveChatRoom: chatRoomId=$chatRoomId, userId=$userId, userName=$userName")
+
+        // 채팅방 정보 가져오기
+        val chatRoomSnapshot = firestore.collection(ChatRoom.COLLECTION_NAME)
+            .document(chatRoomId)
+            .get()
+            .await()
+
+        val chatRoomType = chatRoomSnapshot.getString("type")?.let {
+            ChatRoomType.valueOf(it)
+        } ?: ChatRoomType.GROUP
+
+        if (chatRoomType == ChatRoomType.DM) {
+            // DM: hiddenBy에만 추가 (participants는 유지)
+            Log.d(TAG, "leaveChatRoom: DM - Adding to hiddenBy")
+            firestore.collection(ChatRoom.COLLECTION_NAME)
+                .document(chatRoomId)
+                .update("hiddenBy", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                .await()
+        } else {
+            // GROUP: participants에서 제거 + 시스템 메시지
+            Log.d(TAG, "leaveChatRoom: GROUP - Removing from participants")
+            firestore.collection(ChatRoom.COLLECTION_NAME)
+                .document(chatRoomId)
+                .update("participants", com.google.firebase.firestore.FieldValue.arrayRemove(userId))
+                .await()
+
+            // 시스템 메시지 추가
+            val systemMessage = Message(
+                chatRoomId = chatRoomId,
+                senderId = "",
+                senderName = "",
+                text = "${userName}님이 나갔습니다",
+                type = MessageType.SYSTEM
+            )
+            firestore.collection(Message.COLLECTION_NAME)
+                .add(systemMessage)
+                .await()
+        }
+
+        Log.d(TAG, "leaveChatRoom: Success")
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.e(TAG, "leaveChatRoom: Failed", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Add system message when user joins
+     */
+    suspend fun addJoinMessage(chatRoomId: String, userName: String): Result<Unit> = try {
+        val systemMessage = Message(
+            chatRoomId = chatRoomId,
+            senderId = "",
+            senderName = "",
+            text = "${userName}님이 입장했습니다",
+            type = MessageType.SYSTEM
+        )
+        firestore.collection(Message.COLLECTION_NAME)
+            .add(systemMessage)
+            .await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Unhide chat room (clear hiddenBy list)
+     * 메시지 전송 시 숨긴 사용자에게 다시 보이도록 함
+     */
+    private suspend fun unhideChatRoom(chatRoomId: String) {
+        try {
+            Log.d(TAG, "unhideChatRoom: chatRoomId=$chatRoomId")
+            firestore.collection(ChatRoom.COLLECTION_NAME)
+                .document(chatRoomId)
+                .update("hiddenBy", emptyList<String>())
+                .await()
+            Log.d(TAG, "unhideChatRoom: Success")
+        } catch (e: Exception) {
+            // 실패해도 메시지 전송은 성공으로 처리
+            Log.w(TAG, "unhideChatRoom: Failed but ignore", e)
+        }
     }
 }

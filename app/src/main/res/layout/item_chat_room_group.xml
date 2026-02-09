@@ -67,17 +67,45 @@
             android:textSize="12sp"
             tools:text="홍길동, 김철수, 박영희 외 3명" />
 
-        <!-- 마지막 메시지 -->
-        <TextView
-            android:id="@+id/textViewLastMessage"
+        <!-- 마지막 메시지와 뱃지 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:textColor="@color/textSecondary"
-            android:textSize="14sp"
-            tools:text="Last message in the chat room" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 마지막 메시지 -->
+            <TextView
+                android:id="@+id/textViewLastMessage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/textSecondary"
+                android:textSize="14sp"
+                tools:text="Last message in the chat room" />
+
+            <!-- 읽지 않은 메시지 뱃지 -->
+            <TextView
+                android:id="@+id/textViewUnreadBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_unread_badge"
+                android:minWidth="20dp"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:visibility="gone"
+                tools:text="99+"
+                tools:visibility="visible" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

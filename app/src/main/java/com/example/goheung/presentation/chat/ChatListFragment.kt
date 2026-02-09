@@ -209,6 +209,12 @@ class ChatListFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 채팅방에서 돌아왔을 때 읽지 않은 메시지 개수 새로고침
+        viewModel.refreshUnreadCounts()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

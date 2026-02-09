@@ -39,33 +39,59 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- 마지막 메시지 -->
-        <TextView
-            android:id="@+id/textViewLastMessage"
+        <!-- 마지막 메시지와 뱃지를 담는 컨테이너 -->
+        <LinearLayout
+            android:id="@+id/layoutMessageRow"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:ellipsize="end"
-            android:maxLines="2"
-            android:textColor="@color/textSecondary"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@id/textViewTimestamp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName"
-            tools:text="Last message in the chat room" />
-
-        <!-- 시간 -->
-        <TextView
-            android:id="@+id/textViewTimestamp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:textColor="@color/textHint"
-            android:textSize="12sp"
-            app:layout_constraintBottom_toBottomOf="@id/textViewLastMessage"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/textViewLastMessage"
-            tools:text="12:30" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/textViewChatRoomName">
+
+            <!-- 마지막 메시지 -->
+            <TextView
+                android:id="@+id/textViewLastMessage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/textSecondary"
+                android:textSize="14sp"
+                tools:text="Last message in the chat room" />
+
+            <!-- 읽지 않은 메시지 뱃지 -->
+            <TextView
+                android:id="@+id/textViewUnreadBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_unread_badge"
+                android:gravity="center"
+                android:minWidth="20dp"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="5"
+                tools:visibility="visible" />
+
+            <!-- 시간 -->
+            <TextView
+                android:id="@+id/textViewTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/textHint"
+                android:textSize="12sp"
+                tools:text="12:30" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

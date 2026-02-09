@@ -30,7 +30,8 @@ class ChatListViewModel @Inject constructor(
     data class ChatRoomWithParticipants(
         val chatRoom: ChatRoom,
         val participants: List<User>,
-        val displayName: String
+        val displayName: String,
+        val unreadCount: Int = 0
     )
 
     private val _directChats = MutableLiveData<List<ChatRoomWithParticipants>>()
@@ -100,29 +101,38 @@ class ChatListViewModel @Inject constructor(
             onSuccess = { users ->
                 Log.d(TAG, "processChatRooms: Loaded ${users.size} users")
                 val userMap = users.associateBy { it.uid }
-                val roomsWithParticipants = visibleRooms.map { room ->
-                    val participants = room.participants.mapNotNull { userMap[it] }
-                    val displayName = calculateDisplayName(room, participants, myUid)
-                    Log.d(TAG, "processChatRooms: Room ${room.id} -> displayName='$displayName'")
-                    ChatRoomWithParticipants(room, participants, displayName)
+
+                // 읽지 않은 메시지 개수를 포함한 채팅방 목록 생성
+                viewModelScope.launch {
+                    val roomsWithParticipants = visibleRooms.map { room ->
+                        val participants = room.participants.mapNotNull { userMap[it] }
+                        val displayName = calculateDisplayName(room, participants, myUid)
+
+                        // 읽지 않은 메시지 개수 가져오기
+                        val unreadCountResult = chatRepository.getUnreadCount(room.id, myUid)
+                        val unreadCount = unreadCountResult.getOrDefault(0)
+
+                        Log.d(TAG, "processChatRooms: Room ${room.id} -> displayName='$displayName', unread=$unreadCount")
+                        ChatRoomWithParticipants(room, participants, displayName, unreadCount)
+                    }
+
+                    val directMessages = roomsWithParticipants
+                        .filter { it.chatRoom.type == ChatRoomType.DM }
+                        .sortedWith(
+                            compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
+                                .thenByDescending { it.chatRoom.lastMessageTimestamp }
+                        )
+                    val groupMessages = roomsWithParticipants
+                        .filter { it.chatRoom.type == ChatRoomType.GROUP }
+                        .sortedWith(
+                            compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
+                                .thenByDescending { it.chatRoom.lastMessageTimestamp }
+                        )
+
+                    Log.d(TAG, "processChatRooms: DMs=${directMessages.size}, Groups=${groupMessages.size}")
+                    _directChats.value = directMessages
+                    _groupChats.value = groupMessages
                 }
-
-                val directMessages = roomsWithParticipants
-                    .filter { it.chatRoom.type == ChatRoomType.DM }
-                    .sortedWith(
-                        compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
-                            .thenByDescending { it.chatRoom.lastMessageTimestamp }
-                    )
-                val groupMessages = roomsWithParticipants
-                    .filter { it.chatRoom.type == ChatRoomType.GROUP }
-                    .sortedWith(
-                        compareByDescending<ChatRoomWithParticipants> { it.chatRoom.isFavoriteBy(myUid) }
-                            .thenByDescending { it.chatRoom.lastMessageTimestamp }
-                    )
-
-                Log.d(TAG, "processChatRooms: DMs=${directMessages.size}, Groups=${groupMessages.size}")
-                _directChats.value = directMessages
-                _groupChats.value = groupMessages
             },
             onFailure = { e ->
                 Log.e(TAG, "processChatRooms: Failed to load users", e)
@@ -200,6 +210,39 @@ class ChatListViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * 읽지 않은 메시지 개수 새로고침
+     * 채팅방에서 돌아올 때 호출
+     */
+    fun refreshUnreadCounts() {
+        val myUid = authRepository.currentUser?.uid ?: return
+        val currentDirectChats = _directChats.value ?: emptyList()
+        val currentGroupChats = _groupChats.value ?: emptyList()
+
+        if (currentDirectChats.isEmpty() && currentGroupChats.isEmpty()) return
+
+        Log.d(TAG, "refreshUnreadCounts: Refreshing unread counts")
+        viewModelScope.launch {
+            // DM 채팅방 새로고침
+            val updatedDirectChats = currentDirectChats.map { item ->
+                val unreadCountResult = chatRepository.getUnreadCount(item.chatRoom.id, myUid)
+                val unreadCount = unreadCountResult.getOrDefault(0)
+                item.copy(unreadCount = unreadCount)
+            }
+            _directChats.value = updatedDirectChats
+
+            // Group 채팅방 새로고침
+            val updatedGroupChats = currentGroupChats.map { item ->
+                val unreadCountResult = chatRepository.getUnreadCount(item.chatRoom.id, myUid)
+                val unreadCount = unreadCountResult.getOrDefault(0)
+                item.copy(unreadCount = unreadCount)
+            }
+            _groupChats.value = updatedGroupChats
+
+            Log.d(TAG, "refreshUnreadCounts: Done")
+        }
     }
 
     /**

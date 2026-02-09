@@ -193,24 +193,41 @@ class ChatRepository @Inject constructor(
 
     /**
      * Mark messages as read
+     * 복합 인덱스 없이 클라이언트 사이드 필터링 사용
      */
     suspend fun markMessagesAsRead(chatRoomId: String, userId: String): Result<Unit> = try {
+        Log.d(TAG, "markMessagesAsRead: chatRoomId=$chatRoomId, userId=$userId")
+
         val messagesSnapshot = firestore.collection(Message.COLLECTION_NAME)
             .whereEqualTo("chatRoomId", chatRoomId)
-            .whereEqualTo("isRead", false)
             .get()
             .await()
 
+        Log.d(TAG, "markMessagesAsRead: Found ${messagesSnapshot.documents.size} messages")
+
         val batch = firestore.batch()
+        var updateCount = 0
         messagesSnapshot.documents
-            .filter { it.getString("senderId") != userId }
+            .filter { doc ->
+                val senderId = doc.getString("senderId")
+                val isRead = doc.getBoolean("isRead") ?: false
+                senderId != userId && !isRead
+            }
             .forEach { doc ->
                 batch.update(doc.reference, "isRead", true)
+                updateCount++
             }
 
-        batch.commit().await()
+        if (updateCount > 0) {
+            batch.commit().await()
+            Log.d(TAG, "markMessagesAsRead: Updated $updateCount messages to read")
+        } else {
+            Log.d(TAG, "markMessagesAsRead: No messages to update")
+        }
+
         Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "markMessagesAsRead: Failed", e)
         Result.failure(e)
     }
 
@@ -400,5 +417,35 @@ class ChatRepository @Inject constructor(
             // 실패해도 메시지 전송은 성공으로 처리
             Log.w(TAG, "unhideChatRoom: Failed but ignore", e)
         }
+    }
+
+    /**
+     * Get unread message count for a chat room
+     * 본인이 보내지 않은 메시지 중 읽지 않은 메시지 개수
+     * Note: 복합 인덱스 필요 없이 클라이언트 사이드 필터링 사용
+     */
+    suspend fun getUnreadCount(chatRoomId: String, userId: String): Result<Int> = try {
+        Log.d(TAG, "getUnreadCount: Starting query for chatRoomId=$chatRoomId, userId=$userId")
+
+        val snapshot = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .get()
+            .await()
+
+        Log.d(TAG, "getUnreadCount: Found ${snapshot.documents.size} total messages")
+
+        // 본인이 보낸 메시지 제외 + 읽지 않은 메시지만 카운트 (클라이언트 필터링)
+        // isRead 필드가 없으면 false(읽지 않음)로 간주
+        val unreadCount = snapshot.documents.count { doc ->
+            val senderId = doc.getString("senderId")
+            val isRead = doc.getBoolean("isRead") ?: false
+            senderId != userId && !isRead
+        }
+
+        Log.d(TAG, "getUnreadCount: chatRoomId=$chatRoomId, unreadCount=$unreadCount")
+        Result.success(unreadCount)
+    } catch (e: Exception) {
+        Log.e(TAG, "getUnreadCount: Failed for chatRoomId=$chatRoomId", e)
+        Result.failure(e)
     }
 }

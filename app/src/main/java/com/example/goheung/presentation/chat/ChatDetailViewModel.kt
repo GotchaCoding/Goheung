@@ -161,10 +161,22 @@ class ChatDetailViewModel @Inject constructor(
      * Mark messages as read
      */
     fun markMessagesAsRead(userId: String) {
-        if (chatRoomId.isEmpty()) return
+        Log.d(TAG, "markMessagesAsRead: chatRoomId=$chatRoomId, userId=$userId")
+        if (chatRoomId.isEmpty()) {
+            Log.e(TAG, "markMessagesAsRead: chatRoomId is empty")
+            return
+        }
 
         viewModelScope.launch {
-            chatRepository.markMessagesAsRead(chatRoomId, userId)
+            val result = chatRepository.markMessagesAsRead(chatRoomId, userId)
+            result.fold(
+                onSuccess = {
+                    Log.d(TAG, "markMessagesAsRead: Success")
+                },
+                onFailure = { e ->
+                    Log.e(TAG, "markMessagesAsRead: Failed", e)
+                }
+            )
         }
     }
 

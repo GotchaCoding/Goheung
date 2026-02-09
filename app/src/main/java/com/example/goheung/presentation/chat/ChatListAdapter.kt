@@ -110,6 +110,14 @@ class ChatListAdapter(
                     else android.R.drawable.star_big_off
                 )
 
+                // 읽지 않은 메시지 뱃지 설정
+                if (item.unreadCount > 0) {
+                    textViewUnreadBadge.visibility = android.view.View.VISIBLE
+                    textViewUnreadBadge.text = if (item.unreadCount > 99) "99+" else item.unreadCount.toString()
+                } else {
+                    textViewUnreadBadge.visibility = android.view.View.GONE
+                }
+
                 imageViewFavorite.setOnClickListener {
                     onFavoriteClick(item.chatRoom.id)
                 }
@@ -163,6 +171,14 @@ class ChatListAdapter(
                     if (isFavorite) android.R.drawable.star_big_on
                     else android.R.drawable.star_big_off
                 )
+
+                // 읽지 않은 메시지 뱃지 설정
+                if (item.unreadCount > 0) {
+                    textViewUnreadBadge.visibility = android.view.View.VISIBLE
+                    textViewUnreadBadge.text = if (item.unreadCount > 99) "99+" else item.unreadCount.toString()
+                } else {
+                    textViewUnreadBadge.visibility = android.view.View.GONE
+                }
 
                 imageViewFavorite.setOnClickListener {
                     onFavoriteClick(item.chatRoom.id)

@@ -24,7 +24,7 @@ class UserListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: UserListViewModel by viewModels()
-    private lateinit var adapter: UserListAdapter
+    private lateinit var adapter: UserProfileAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,9 +42,14 @@ class UserListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = UserListAdapter { user ->
-            viewModel.onUserClicked(user)
-        }
+        adapter = UserProfileAdapter(
+            onUserClick = { user ->
+                viewModel.onUserClicked(user)
+            },
+            onAttendanceChanged = { uid, status ->
+                viewModel.onAttendanceChanged(uid, status)
+            }
+        )
         binding.recyclerViewUsers.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@UserListFragment.adapter
@@ -55,10 +60,10 @@ class UserListFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        viewModel.users.observe(viewLifecycleOwner) { users ->
-            adapter.submitList(users)
-            binding.textViewEmpty.isVisible = users.isEmpty()
-            binding.recyclerViewUsers.isVisible = users.isNotEmpty()
+        viewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            adapter.submitList(profiles)
+            binding.textViewEmpty.isVisible = profiles.isEmpty()
+            binding.recyclerViewUsers.isVisible = profiles.isNotEmpty()
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->

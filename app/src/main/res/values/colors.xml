@@ -33,4 +33,9 @@
 
     <!-- Participants -->
     <color name="participantsBackground">#F5F5F5</color>
+
+    <!-- Presence Colors -->
+    <color name="presenceOnline">#4CAF50</color>
+    <color name="presenceOffline">#9E9E9E</color>
+    <color name="presenceInChat">#2196F3</color>
 </resources>

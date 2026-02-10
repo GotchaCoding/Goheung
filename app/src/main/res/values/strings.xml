@@ -64,4 +64,16 @@
     <!-- Chat Sections -->
     <string name="direct_messages">Direct Messages</string>
     <string name="group_chats">Group Chats</string>
+
+    <!-- Presence -->
+    <string name="presence_active">활성</string>
+    <string name="presence_in_chat">대화 중</string>
+    <string name="presence_offline">오프라인</string>
+    <string name="presence_just_now">방금 전</string>
+
+    <!-- Attendance -->
+    <string name="attendance_working">근무중</string>
+    <string name="attendance_remote">재택근무</string>
+    <string name="attendance_on_leave">휴가</string>
+    <string name="attendance_half_day">반차</string>
 </resources>

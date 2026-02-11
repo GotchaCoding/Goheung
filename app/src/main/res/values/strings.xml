@@ -60,6 +60,9 @@
     <!-- User List -->
     <string name="user_list_title">사용자 목록</string>
     <string name="no_users">등록된 사용자가 없습니다</string>
+    <string name="search_hint">이름 또는 부서 검색</string>
+    <string name="clear_search">검색어 삭제</string>
+    <string name="no_search_results">검색 결과가 없습니다</string>
 
     <!-- Chat Sections -->
     <string name="direct_messages">Direct Messages</string>

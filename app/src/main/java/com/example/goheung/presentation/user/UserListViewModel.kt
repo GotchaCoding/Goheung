@@ -13,6 +13,8 @@ import com.example.goheung.data.repository.ChatRepository
 import com.example.goheung.data.repository.PresenceRepository
 import com.example.goheung.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -39,6 +41,12 @@ class UserListViewModel @Inject constructor(
     private val _navigateToChatDetail = MutableLiveData<Pair<String, String>?>()
     val navigateToChatDetail: LiveData<Pair<String, String>?> = _navigateToChatDetail
 
+    // 검색 기능을 위한 필드
+    private var allUserProfiles: List<UserProfile> = emptyList()
+    private val _searchQuery = MutableLiveData("")
+    private var searchJob: Job? = null
+    private val searchDelayMillis: Long = 1000
+
     init {
         loadUserProfiles()
         setupPresenceForCurrentUser()
@@ -63,12 +71,22 @@ class UserListViewModel @Inject constructor(
 
                     // 모든 Flow 결합
                     if (profileFlows.isEmpty()) {
+                        allUserProfiles = emptyList()
                         _userProfiles.value = emptyList()
                         _loading.value = false
                     } else {
                         combine(profileFlows) { it.toList() }
                             .collect { profiles ->
-                                _userProfiles.value = profiles
+                                allUserProfiles = profiles
+
+                                // 현재 검색어가 있으면 필터링 적용
+                                val currentQuery = _searchQuery.value ?: ""
+                                if (currentQuery.isEmpty()) {
+                                    _userProfiles.value = profiles
+                                } else {
+                                    performSearch(currentQuery)
+                                }
+
                                 _loading.value = false
                             }
                     }
@@ -114,5 +132,49 @@ class UserListViewModel @Inject constructor(
 
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * TMDB 패턴을 적용한 Debounce 검색
+     * Fragment에서 EditText의 텍스트 변경 시마다 호출
+     */
+    fun onSearchQueryChanged(query: String) {
+        // 기존 검색 Job 취소
+        searchJob?.cancel()
+
+        // 새로운 검색 Job 시작
+        searchJob = viewModelScope.launch {
+            delay(searchDelayMillis)  // 1초 대기
+            _searchQuery.value = query.trim()
+            performSearch(query.trim())
+        }
+    }
+
+    /**
+     * 실제 검색 수행 (클라이언트 필터링)
+     */
+    private fun performSearch(query: String) {
+        if (query.isEmpty()) {
+            // 검색어가 없으면 전체 목록 표시
+            _userProfiles.value = allUserProfiles
+            return
+        }
+
+        // displayName 또는 department에서 대소문자 구분 없이 검색
+        val filteredProfiles = allUserProfiles.filter { profile ->
+            profile.user.displayName.contains(query, ignoreCase = true) ||
+            profile.user.department.contains(query, ignoreCase = true)
+        }
+
+        _userProfiles.value = filteredProfiles
+    }
+
+    /**
+     * 검색어 초기화
+     */
+    fun clearSearch() {
+        searchJob?.cancel()
+        _searchQuery.value = ""
+        _userProfiles.value = allUserProfiles
     }
 }

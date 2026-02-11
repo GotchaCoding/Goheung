@@ -89,13 +89,6 @@ class UserListViewModel @Inject constructor(
         }
     }
 
-    fun onAttendanceChanged(uid: String, status: AttendanceStatus) {
-        viewModelScope.launch {
-            attendanceRepository.updateAttendance(uid, status)
-                .onFailure { _error.value = it.message }
-        }
-    }
-
     fun onUserClicked(user: User) {
         val myUid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {

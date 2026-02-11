@@ -43,7 +43,7 @@
         android:layout_marginEnd="8dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="@id/frameAvatar"
-        app:layout_constraintEnd_toStartOf="@id/spinnerAttendance"
+        app:layout_constraintEnd_toStartOf="@id/textViewAttendance"
         app:layout_constraintStart_toEndOf="@id/frameAvatar"
         app:layout_constraintTop_toTopOf="@id/frameAvatar">
 
@@ -81,14 +81,19 @@
             tools:text="5분 전" />
     </LinearLayout>
 
-    <!-- 우측: 근무 상태 Spinner -->
-    <Spinner
-        android:id="@+id/spinnerAttendance"
+    <!-- 우측: 근무 상태 (읽기 전용) -->
+    <TextView
+        android:id="@+id/textViewAttendance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="100dp"
+        android:minWidth="80dp"
+        android:padding="8dp"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp"
+        android:gravity="center"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="근무중" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

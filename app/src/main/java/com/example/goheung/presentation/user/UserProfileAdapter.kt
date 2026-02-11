@@ -2,10 +2,7 @@ package com.example.goheung.presentation.user
 
 import android.content.res.ColorStateList
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -18,15 +15,14 @@ import com.example.goheung.data.model.UserProfile
 import com.example.goheung.databinding.ItemUserProfileBinding
 
 class UserProfileAdapter(
-    private val onUserClick: (User) -> Unit,
-    private val onAttendanceChanged: (String, AttendanceStatus) -> Unit
+    private val onUserClick: (User) -> Unit
 ) : ListAdapter<UserProfile, UserProfileAdapter.ViewHolder>(UserProfileDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemUserProfileBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
-        return ViewHolder(binding, onUserClick, onAttendanceChanged)
+        return ViewHolder(binding, onUserClick)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -35,11 +31,8 @@ class UserProfileAdapter(
 
     class ViewHolder(
         private val binding: ItemUserProfileBinding,
-        private val onUserClick: (User) -> Unit,
-        private val onAttendanceChanged: (String, AttendanceStatus) -> Unit
+        private val onUserClick: (User) -> Unit
     ) : RecyclerView.ViewHolder(binding.root) {
-
-        private var isSpinnerInitialized = false
 
         fun bind(profile: UserProfile) {
             // 1. 기본 정보
@@ -56,8 +49,8 @@ class UserProfileAdapter(
             // 3. Presence 업데이트
             updatePresence(profile)
 
-            // 4. Attendance Spinner 설정
-            setupAttendanceSpinner(profile)
+            // 4. Attendance 상태 표시
+            displayAttendanceStatus(profile)
 
             // 5. 클릭 리스너
             binding.root.setOnClickListener { onUserClick(profile.user) }
@@ -83,19 +76,7 @@ class UserProfileAdapter(
             binding.textViewPresence.text = profile.getPresenceText()
         }
 
-        private fun setupAttendanceSpinner(profile: UserProfile) {
-            val context = binding.root.context
-            val statuses = AttendanceStatus.values()
-
-            val adapter = ArrayAdapter(
-                context,
-                R.layout.spinner_attendance_item,
-                statuses.map { it.displayName }
-            )
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            binding.spinnerAttendance.adapter = adapter
-
-            // 현재 상태 선택
+        private fun displayAttendanceStatus(profile: UserProfile) {
             val currentStatus = profile.attendance?.status?.let {
                 try {
                     AttendanceStatus.valueOf(it)
@@ -104,26 +85,7 @@ class UserProfileAdapter(
                 }
             } ?: AttendanceStatus.WORKING
 
-            isSpinnerInitialized = false
-            binding.spinnerAttendance.setSelection(statuses.indexOf(currentStatus))
-
-            // 변경 리스너
-            binding.spinnerAttendance.onItemSelectedListener =
-                object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(
-                        parent: AdapterView<*>,
-                        view: View?,
-                        position: Int,
-                        id: Long
-                    ) {
-                        if (isSpinnerInitialized) {
-                            onAttendanceChanged(profile.user.uid, statuses[position])
-                        }
-                        isSpinnerInitialized = true
-                    }
-
-                    override fun onNothingSelected(parent: AdapterView<*>) {}
-                }
+            binding.textViewAttendance.text = currentStatus.displayName
         }
     }
 

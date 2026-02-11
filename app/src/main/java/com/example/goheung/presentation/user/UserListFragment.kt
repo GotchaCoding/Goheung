@@ -45,9 +45,6 @@ class UserListFragment : Fragment() {
         adapter = UserProfileAdapter(
             onUserClick = { user ->
                 viewModel.onUserClicked(user)
-            },
-            onAttendanceChanged = { uid, status ->
-                viewModel.onAttendanceChanged(uid, status)
             }
         )
         binding.recyclerViewUsers.apply {

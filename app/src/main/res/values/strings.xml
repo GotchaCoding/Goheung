@@ -72,6 +72,7 @@
     <string name="presence_just_now">방금 전</string>
 
     <!-- Attendance -->
+    <string name="attendance_label">근무 상태</string>
     <string name="attendance_working">근무중</string>
     <string name="attendance_remote">재택근무</string>
     <string name="attendance_on_leave">휴가</string>

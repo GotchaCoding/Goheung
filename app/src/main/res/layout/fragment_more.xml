@@ -60,6 +60,29 @@
             android:textSize="14sp"
             android:textColor="@color/textSecondary"
             tools:text="개발팀" />
+
+        <!-- Attendance Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/attendance_label"
+                android:textSize="14sp"
+                android:textColor="@color/textPrimary" />
+
+            <Spinner
+                android:id="@+id/spinnerAttendance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="120dp" />
+        </LinearLayout>
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton

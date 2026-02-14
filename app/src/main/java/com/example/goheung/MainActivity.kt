@@ -9,6 +9,7 @@ import androidx.fragment.app.commit
 import com.example.goheung.presentation.auth.LoginFragment
 import com.example.goheung.presentation.chat.ChatDetailFragment
 import com.example.goheung.presentation.chat.ChatListFragment
+import com.example.goheung.presentation.location.LocationFragment
 import com.example.goheung.presentation.more.MoreFragment
 import com.example.goheung.presentation.user.UserListFragment
 import com.example.goheung.service.GoheungMessagingService
@@ -47,7 +48,8 @@ class MainActivity : AppCompatActivity(), BottomNavController {
 
         supportFragmentManager.addOnBackStackChangedListener {
             val current = supportFragmentManager.findFragmentById(R.id.fragment_container)
-            if (current is ChatListFragment || current is UserListFragment || current is MoreFragment) {
+            if (current is ChatListFragment || current is UserListFragment ||
+                current is LocationFragment || current is MoreFragment) {
                 showBottomNav()
             }
         }
@@ -89,6 +91,10 @@ class MainActivity : AppCompatActivity(), BottomNavController {
                 }
                 R.id.nav_users -> {
                     switchTab(UserListFragment(), "users")
+                    true
+                }
+                R.id.nav_location -> {
+                    switchTab(LocationFragment(), "location")
                     true
                 }
                 R.id.nav_more -> {

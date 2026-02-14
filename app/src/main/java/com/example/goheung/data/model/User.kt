@@ -11,6 +11,7 @@ data class User(
     val profileImageUrl: String? = null,
     val statusMessage: String? = null,
     val fcmToken: String? = null,
+    val role: String? = null,  // "DRIVER" | "PASSENGER" | null
     @ServerTimestamp
     val createdAt: Date? = null
 ) {

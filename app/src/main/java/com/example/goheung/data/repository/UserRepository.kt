@@ -49,6 +49,16 @@ class UserRepository @Inject constructor(
         }
     }
 
+    suspend fun updateUserRole(uid: String, role: String): Result<Unit> {
+        return try {
+            usersCollection.document(uid).update("role", role).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update user role", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchUsers(query: String): Result<List<User>> {
         return try {
             val snapshot = usersCollection

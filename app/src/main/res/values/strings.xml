@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Goheung</string>
 
+    <!-- Kakao API Key - 실제 키로 교체 필요 -->
+    <string name="kakao_native_app_key">ec4a3c67c41e1e5b07e7e39d21eb05a8</string>
+
     <!-- Chat List -->
     <string name="chat_list_title">Chat Rooms</string>
     <string name="no_chat_rooms">No chat rooms available</string>
@@ -51,6 +54,7 @@
     <!-- Bottom Navigation -->
     <string name="tab_chat">채팅</string>
     <string name="tab_users">사용자</string>
+    <string name="tab_location">위치</string>
     <string name="tab_more">더보기</string>
 
     <!-- More / Profile -->
@@ -84,4 +88,17 @@
     <!-- Notifications -->
     <string name="notification_channel_chat_name">채팅 메시지</string>
     <string name="notification_channel_chat_description">새로운 채팅 메시지 알림</string>
+
+    <!-- Location -->
+    <string name="location_permission_required">위치 권한 필요</string>
+    <string name="location_permission_denied">위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.</string>
+    <string name="open_settings">설정 열기</string>
+    <string name="no_driver_available">운전기사 위치를 찾을 수 없습니다</string>
+    <string name="my_location">내 위치</string>
+
+    <!-- Role -->
+    <string name="role_label">역할</string>
+    <string name="role_driver">운전기사</string>
+    <string name="role_passenger">승객</string>
+    <string name="role_none">미설정</string>
 </resources>

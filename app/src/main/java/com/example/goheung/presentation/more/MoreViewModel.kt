@@ -9,6 +9,7 @@ import com.example.goheung.data.fcm.FcmTokenManager
 import com.example.goheung.data.model.Attendance
 import com.example.goheung.data.model.AttendanceStatus
 import com.example.goheung.data.model.User
+import com.example.goheung.data.model.UserRole
 import com.example.goheung.data.repository.AttendanceRepository
 import com.example.goheung.data.repository.AuthRepository
 import com.example.goheung.data.repository.UserRepository
@@ -41,6 +42,9 @@ class MoreViewModel @Inject constructor(
     private val _attendanceUpdateSuccess = MutableLiveData<Boolean?>()
     val attendanceUpdateSuccess: LiveData<Boolean?> = _attendanceUpdateSuccess
 
+    private val _currentRole = MutableLiveData<UserRole>()
+    val currentRole: LiveData<UserRole> = _currentRole
+
     init {
         loadProfile()
         observeCurrentAttendance()
@@ -51,7 +55,10 @@ class MoreViewModel @Inject constructor(
         viewModelScope.launch {
             _loading.value = true
             userRepository.getUser(uid)
-                .onSuccess { _profile.value = it }
+                .onSuccess { user ->
+                    _profile.value = user
+                    _currentRole.value = UserRole.fromString(user.role)
+                }
             _loading.value = false
         }
     }
@@ -82,6 +89,22 @@ class MoreViewModel @Inject constructor(
                 }
                 .onFailure {
                     _attendanceUpdateSuccess.value = false
+                }
+            _loading.value = false
+        }
+    }
+
+    fun updateRole(role: UserRole) {
+        val uid = authRepository.currentUser?.uid ?: return
+        viewModelScope.launch {
+            _loading.value = true
+            userRepository.updateUserRole(uid, role.name)
+                .onSuccess {
+                    _currentRole.value = role
+                    Log.d(TAG, "Role updated to ${role.name}")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Failed to update role", e)
                 }
             _loading.value = false
         }

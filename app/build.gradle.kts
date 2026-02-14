@@ -103,6 +103,12 @@ dependencies {
     implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.runtime)
 
+    // Location Services
+    implementation(libs.play.services.location)
+
+    // Kakao Map
+    implementation(libs.kakao.map)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

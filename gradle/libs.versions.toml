@@ -41,6 +41,12 @@ googleServices = "4.4.1"
 # Fragment KTX
 fragmentKtx = "1.6.2"
 
+# Location Services
+playServicesLocation = "21.1.0"
+
+# Kakao Map
+kakaoMap = "2.9.5"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -92,6 +98,12 @@ lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-kt
 
 # Fragment KTX
 fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
+
+# Location Services
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+
+# Kakao Map
+kakao-map = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMap" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

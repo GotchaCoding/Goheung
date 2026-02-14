@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide
 import com.example.goheung.BottomNavController
 import com.example.goheung.R
 import com.example.goheung.data.model.AttendanceStatus
+import com.example.goheung.data.model.UserRole
 import com.example.goheung.databinding.FragmentMoreBinding
 import com.example.goheung.presentation.auth.LoginFragment
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,6 +27,7 @@ class MoreFragment : Fragment() {
 
     private val viewModel: MoreViewModel by viewModels()
     private var isSpinnerInitialized = false
+    private var isRoleSpinnerInitialized = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,6 +42,7 @@ class MoreFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbar.title = getString(R.string.tab_more)
         setupAttendanceSpinner()
+        setupRoleSpinner()
         setupObservers()
         setupListeners()
     }
@@ -72,6 +75,34 @@ class MoreFragment : Fragment() {
             }
     }
 
+    private fun setupRoleSpinner() {
+        val roles = UserRole.values()
+        val adapter = ArrayAdapter(
+            requireContext(),
+            R.layout.spinner_attendance_item,
+            roles.map { it.displayName }
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerRole.adapter = adapter
+
+        binding.spinnerRole.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (isRoleSpinnerInitialized) {
+                        viewModel.updateRole(roles[position])
+                    }
+                    isRoleSpinnerInitialized = true
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
+    }
+
     private fun setupObservers() {
         viewModel.profile.observe(viewLifecycleOwner) { user ->
             binding.textViewDisplayName.text = user.displayName
@@ -92,6 +123,12 @@ class MoreFragment : Fragment() {
             isSpinnerInitialized = false
             val statuses = AttendanceStatus.values()
             binding.spinnerAttendance.setSelection(statuses.indexOf(status))
+        }
+
+        viewModel.currentRole.observe(viewLifecycleOwner) { role ->
+            isRoleSpinnerInitialized = false
+            val roles = UserRole.values()
+            binding.spinnerRole.setSelection(roles.indexOf(role))
         }
 
         viewModel.attendanceUpdateSuccess.observe(viewLifecycleOwner) { success ->

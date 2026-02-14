@@ -1,9 +1,11 @@
 package com.example.goheung.presentation.more
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.goheung.data.fcm.FcmTokenManager
 import com.example.goheung.data.model.Attendance
 import com.example.goheung.data.model.AttendanceStatus
 import com.example.goheung.data.model.User
@@ -19,8 +21,13 @@ import javax.inject.Inject
 class MoreViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val attendanceRepository: AttendanceRepository
+    private val attendanceRepository: AttendanceRepository,
+    private val fcmTokenManager: FcmTokenManager
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "MoreViewModel"
+    }
 
     private val _profile = MutableLiveData<User>()
     val profile: LiveData<User> = _profile
@@ -81,6 +88,12 @@ class MoreViewModel @Inject constructor(
     }
 
     fun logout() {
-        authRepository.signOut()
+        viewModelScope.launch {
+            fcmTokenManager.clearToken()
+                .onFailure { e ->
+                    Log.w(TAG, "Failed to clear FCM token", e)
+                }
+            authRepository.signOut()
+        }
     }
 }

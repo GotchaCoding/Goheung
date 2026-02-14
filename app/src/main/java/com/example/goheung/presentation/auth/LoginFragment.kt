@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
@@ -13,6 +14,7 @@ import com.example.goheung.BottomNavController
 import com.example.goheung.R
 import com.example.goheung.databinding.FragmentLoginBinding
 import com.example.goheung.presentation.chat.ChatListFragment
+import com.example.goheung.util.NotificationPermissionHandler
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -22,6 +24,16 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: LoginViewModel by viewModels()
+
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        notificationPermissionLauncher = NotificationPermissionHandler.createPermissionLauncher(this) { _ ->
+            // 권한 결과와 관계없이 화면 이동 진행
+            navigateToChatList()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,7 +61,7 @@ class LoginFragment : Fragment() {
                 }
                 is LoginViewModel.LoginState.Success -> {
                     setLoadingState(false)
-                    navigateToChatList()
+                    requestNotificationPermissionOrNavigate()
                 }
                 is LoginViewModel.LoginState.Error -> {
                     setLoadingState(false)
@@ -80,6 +92,15 @@ class LoginFragment : Fragment() {
         binding.buttonLogin.isEnabled = !isLoading
         binding.editTextEmail.isEnabled = !isLoading
         binding.editTextPassword.isEnabled = !isLoading
+    }
+
+    private fun requestNotificationPermissionOrNavigate() {
+        if (NotificationPermissionHandler.shouldRequestPermission() &&
+            !NotificationPermissionHandler.isPermissionGranted(this)) {
+            NotificationPermissionHandler.requestPermission(notificationPermissionLauncher)
+        } else {
+            navigateToChatList()
+        }
     }
 
     private fun navigateToChatList() {

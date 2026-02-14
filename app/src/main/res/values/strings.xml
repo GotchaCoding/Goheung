@@ -80,4 +80,8 @@
     <string name="attendance_remote">재택근무</string>
     <string name="attendance_on_leave">휴가</string>
     <string name="attendance_half_day">반차</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_chat_name">채팅 메시지</string>
+    <string name="notification_channel_chat_description">새로운 채팅 메시지 알림</string>
 </resources>

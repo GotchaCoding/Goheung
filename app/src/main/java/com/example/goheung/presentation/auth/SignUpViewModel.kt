@@ -1,9 +1,11 @@
 package com.example.goheung.presentation.auth
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.goheung.data.fcm.FcmTokenManager
 import com.example.goheung.data.model.User
 import com.example.goheung.data.repository.AuthRepository
 import com.example.goheung.data.repository.UserRepository
@@ -14,8 +16,13 @@ import javax.inject.Inject
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val fcmTokenManager: FcmTokenManager
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "SignUpViewModel"
+    }
 
     private val _signUpState = MutableLiveData<SignUpState>()
     val signUpState: LiveData<SignUpState> = _signUpState
@@ -45,6 +52,7 @@ class SignUpViewModel @Inject constructor(
                     val createResult = userRepository.createUser(user)
                     createResult.fold(
                         onSuccess = {
+                            registerFcmToken()
                             _signUpState.value = SignUpState.Success
                         },
                         onFailure = { e ->
@@ -58,6 +66,15 @@ class SignUpViewModel @Inject constructor(
                     _signUpState.value = SignUpState.Error(e.message ?: "회원가입에 실패했습니다")
                 }
             )
+        }
+    }
+
+    private fun registerFcmToken() {
+        viewModelScope.launch {
+            fcmTokenManager.registerToken()
+                .onFailure { e ->
+                    Log.w(TAG, "Failed to register FCM token", e)
+                }
         }
     }
 

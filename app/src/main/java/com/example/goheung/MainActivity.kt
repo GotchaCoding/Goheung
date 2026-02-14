@@ -1,14 +1,17 @@
 package com.example.goheung
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.example.goheung.presentation.auth.LoginFragment
+import com.example.goheung.presentation.chat.ChatDetailFragment
 import com.example.goheung.presentation.chat.ChatListFragment
 import com.example.goheung.presentation.more.MoreFragment
 import com.example.goheung.presentation.user.UserListFragment
+import com.example.goheung.service.GoheungMessagingService
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,6 +37,7 @@ class MainActivity : AppCompatActivity(), BottomNavController {
                 showBottomNav()
                 switchTab(ChatListFragment(), "chat")
                 bottomNav.selectedItemId = R.id.nav_chat
+                handleNotificationIntent(intent)
             } else {
                 supportFragmentManager.commit {
                     replace(R.id.fragment_container, LoginFragment())
@@ -46,6 +50,33 @@ class MainActivity : AppCompatActivity(), BottomNavController {
             if (current is ChatListFragment || current is UserListFragment || current is MoreFragment) {
                 showBottomNav()
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
+    }
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        intent ?: return
+        val chatRoomId = intent.getStringExtra(GoheungMessagingService.EXTRA_CHAT_ROOM_ID) ?: return
+        val chatRoomName = intent.getStringExtra(GoheungMessagingService.EXTRA_CHAT_ROOM_NAME) ?: ""
+
+        if (firebaseAuth.currentUser != null) {
+            navigateToChatDetail(chatRoomId, chatRoomName)
+            // 처리 후 Intent에서 extra 제거
+            intent.removeExtra(GoheungMessagingService.EXTRA_CHAT_ROOM_ID)
+            intent.removeExtra(GoheungMessagingService.EXTRA_CHAT_ROOM_NAME)
+        }
+    }
+
+    private fun navigateToChatDetail(chatRoomId: String, chatRoomName: String) {
+        hideBottomNav()
+        supportFragmentManager.commit {
+            replace(R.id.fragment_container, ChatDetailFragment.newInstance(chatRoomId, chatRoomName))
+            addToBackStack(null)
         }
     }
 

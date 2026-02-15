@@ -44,6 +44,14 @@ class LocationViewModel @Inject constructor(
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
+    private val _mySpeed = MutableLiveData<Float>()
+    val mySpeed: LiveData<Float> = _mySpeed
+
+    private val _myBearing = MutableLiveData<Float?>()
+    val myBearing: LiveData<Float?> = _myBearing
+
+    private var previousBearing: Float? = null
+
     init {
         observeLocations()
         setupDisconnectHandler()
@@ -148,15 +156,30 @@ class LocationViewModel @Inject constructor(
                 val user = auth.currentUser ?: return@launch
                 val userProfile = userRepository.getUser(user.uid).getOrNull()
 
+                // 속도/방향/정확도 추출
+                val speed = if (location.hasSpeed()) location.speed else 0f
+                val rawBearing = if (location.hasBearing()) location.bearing else 0f
+                val bearing = if (location.hasBearing()) smoothBearing(rawBearing) else 0f
+                val accuracy = if (location.hasAccuracy()) location.accuracy else 0f
+                val hasBearing = location.hasBearing()
+
+                // LiveData 업데이트
+                _mySpeed.value = speed
+                _myBearing.value = if (hasBearing) bearing else null
+
                 locationRepository.updateLocation(
                     uid = user.uid,
                     lat = location.latitude,
                     lng = location.longitude,
                     role = userProfile?.role ?: "PASSENGER",
-                    displayName = userProfile?.displayName ?: "Unknown"
+                    displayName = userProfile?.displayName ?: "Unknown",
+                    speed = speed,
+                    bearing = bearing,
+                    accuracy = accuracy,
+                    hasBearing = hasBearing
                 )
 
-                Log.d(TAG, "Location updated: lat=${location.latitude}, lng=${location.longitude}")
+                Log.d(TAG, "Location updated: lat=${location.latitude}, lng=${location.longitude}, speed=$speed, bearing=$bearing")
             }
         }
     }
@@ -201,6 +224,23 @@ class LocationViewModel @Inject constructor(
      */
     fun clearErrorMessage() {
         _errorMessage.value = null
+    }
+
+    /**
+     * Bearing 스무딩 (떨림 방지)
+     */
+    private fun smoothBearing(newBearing: Float): Float {
+        val prev = previousBearing ?: return newBearing.also { previousBearing = it }
+
+        // 각도 차이 계산 (0-360도 순환 고려)
+        var delta = newBearing - prev
+        if (delta > 180) delta -= 360
+        if (delta < -180) delta += 360
+
+        // 가중 평균 (70% 새값, 30% 이전값)
+        val smoothed = (prev + delta * 0.7f + 360) % 360
+        previousBearing = smoothed
+        return smoothed
     }
 
     override fun onCleared() {

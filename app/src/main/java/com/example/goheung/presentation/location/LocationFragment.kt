@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,7 @@ import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.databinding.FragmentLocationBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseAuth
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.LatLng
@@ -24,17 +26,24 @@ import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
-import com.kakao.vectormap.label.LabelStyles
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class LocationFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "LocationFragment"
+    }
 
     private var _binding: FragmentLocationBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel: LocationViewModel by viewModels()
     private var kakaoMap: KakaoMap? = null
+
+    @Inject
+    lateinit var auth: FirebaseAuth
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -107,6 +116,10 @@ class LocationFragment : Fragment() {
             }
         }
 
+        viewModel.mySpeed.observe(viewLifecycleOwner) { speed ->
+            updateSpeedDisplay(speed)
+        }
+
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
             message?.let {
                 Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
@@ -124,32 +137,84 @@ class LocationFragment : Fragment() {
     }
 
     private fun updateMarkers(locations: List<UserLocation>) {
-        val map = kakaoMap ?: return
-        map.labelManager?.layer?.removeAll()
+        val map = kakaoMap ?: run {
+            Log.w(TAG, "updateMarkers: kakaoMap is null")
+            return
+        }
+        val currentUid = auth.currentUser?.uid
+        Log.d(TAG, "updateMarkers: locations=${locations.size}, currentUid=$currentUid")
+        Log.d(TAG, "updateMarkers: labelManager=${map.labelManager}, layer=${map.labelManager?.layer}")
+
+        // labelManager나 layer가 null이면 리턴
+        val labelManager = map.labelManager
+        if (labelManager == null) {
+            Log.e(TAG, "labelManager is null!")
+            return
+        }
+
+        val layer = labelManager.layer
+        if (layer == null) {
+            Log.e(TAG, "layer is null!")
+            return
+        }
+
+        layer.removeAll()
+        Log.d(TAG, "Removed all existing labels")
 
         locations.forEach { location ->
-            val labelOptions = LabelOptions.from(
-                LatLng.from(location.lat, location.lng)
-            ).apply {
-                // 역할에 따라 다른 스타일 적용
-                val style = if (location.role == "DRIVER") {
-                    // 운전기사 마커
-                    LabelStyle.from(R.drawable.ic_person_placeholder)
+            val isMe = location.uid == currentUid
+            Log.d(TAG, "Adding marker: uid=${location.uid}, isMe=$isMe, lat=${location.lat}, lng=${location.lng}")
+
+            try {
+                val latLng = LatLng.from(location.lat, location.lng)
+                Log.d(TAG, "Created LatLng: $latLng")
+
+                // 라벨 스타일 생성 (Android 시스템 아이콘 사용)
+                val iconRes = if (isMe) {
+                    android.R.drawable.presence_online  // 파란색 온라인 표시
                 } else {
-                    // 승객 마커
-                    LabelStyle.from(R.drawable.ic_person_placeholder)
+                    android.R.drawable.presence_invisible  // 회색 표시
                 }
-                setStyles(style)
-                setTexts(location.displayName)
+
+                val labelStyle = LabelStyle.from(iconRes)
+                val labelText = if (isMe) getString(R.string.my_location_label) else location.displayName
+
+                val labelOptions = LabelOptions.from(latLng).apply {
+                    setStyles(labelStyle)
+                    setTexts(labelText)
+                }
+                Log.d(TAG, "Created LabelOptions with style: $labelOptions")
+
+                val label = layer.addLabel(labelOptions)
+                Log.d(TAG, "Label added: $label (isMe=$isMe, text=$labelText)")
+
+                if (label == null) {
+                    Log.e(TAG, "addLabel returned null for ${location.uid}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add label for ${location.uid}", e)
+                e.printStackTrace()
             }
-            map.labelManager?.layer?.addLabel(labelOptions)
         }
+
+        Log.d(TAG, "Total labels on layer: ${layer.labelCount}")
     }
 
     private fun moveCameraToLocation(lat: Double, lng: Double, zoom: Int = 14) {
         kakaoMap?.moveCamera(
             CameraUpdateFactory.newCenterPosition(LatLng.from(lat, lng), zoom)
         )
+    }
+
+    private fun updateSpeedDisplay(speed: Float) {
+        val speedKmh = (speed * 3.6f).toInt() // m/s → km/h
+
+        if (speedKmh > 0) {
+            binding.textViewSpeed.text = speedKmh.toString()
+            binding.layoutSpeed.isVisible = true
+        } else {
+            binding.layoutSpeed.isVisible = false
+        }
     }
 
     private fun requestLocationPermission() {

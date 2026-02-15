@@ -32,7 +32,11 @@ class LocationRepository @Inject constructor(
         lat: Double,
         lng: Double,
         role: String,
-        displayName: String
+        displayName: String,
+        speed: Float = 0f,
+        bearing: Float = 0f,
+        accuracy: Float = 0f,
+        hasBearing: Boolean = false
     ): Result<Unit> {
         return try {
             val locationRef = database.getReference("$LOCATIONS_PATH/$uid")
@@ -42,7 +46,11 @@ class LocationRepository @Inject constructor(
                 "lng" to lng,
                 "role" to role,
                 "timestamp" to System.currentTimeMillis(),
-                "displayName" to displayName
+                "displayName" to displayName,
+                "speed" to speed,
+                "bearing" to bearing,
+                "accuracy" to accuracy,
+                "hasBearing" to hasBearing
             )
             locationRef.setValue(locationData).await()
             Result.success(Unit)

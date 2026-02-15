@@ -56,14 +56,17 @@ class LocationService @Inject constructor(
         }
 
         val locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            Priority.PRIORITY_HIGH_ACCURACY,
             interval
-        ).build()
+        ).setMinUpdateIntervalMillis(interval / 2)
+            .build()
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
-                    Log.d(TAG, "Location updated: lat=${location.latitude}, lng=${location.longitude}")
+                    Log.d(TAG, "Location updated: lat=${location.latitude}, lng=${location.longitude}, " +
+                            "speed=${location.speed}, bearing=${location.bearing}, " +
+                            "hasSpeed=${location.hasSpeed()}, hasBearing=${location.hasBearing()}")
                     callback(location)
                 }
             }

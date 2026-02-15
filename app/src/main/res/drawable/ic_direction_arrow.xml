@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- 손전등 빛 효과 - 넓은 원뿔 (위쪽 방향, bearing=0) -->
+    <!-- 가장 바깥쪽 빛 (매우 연함) -->
+    <path
+        android:fillColor="#152196F3"
+        android:pathData="M50,50 L15,5 L85,5 Z" />
+    <!-- 중간 빛 -->
+    <path
+        android:fillColor="#302196F3"
+        android:pathData="M50,50 L25,10 L75,10 Z" />
+    <!-- 안쪽 밝은 빛 -->
+    <path
+        android:fillColor="#502196F3"
+        android:pathData="M50,50 L35,15 L65,15 Z" />
+    <!-- 중심 포인트 -->
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M50,50 m-8,0 a8,8 0,1,1 16,0 a8,8 0,1,1 -16,0" />
+</vector>

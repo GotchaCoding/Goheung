@@ -95,6 +95,8 @@
     <string name="open_settings">설정 열기</string>
     <string name="no_driver_available">운전기사 위치를 찾을 수 없습니다</string>
     <string name="my_location">내 위치</string>
+    <string name="speed_unit_kmh">km/h</string>
+    <string name="my_location_label">내 위치</string>
 
     <!-- Role -->
     <string name="role_label">역할</string>

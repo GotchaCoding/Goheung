@@ -1,8 +1,7 @@
 <resources>
     <string name="app_name">Goheung</string>
 
-    <!-- Kakao API Key - 실제 키로 교체 필요 -->
-    <string name="kakao_native_app_key">ec4a3c67c41e1e5b07e7e39d21eb05a8</string>
+    <!-- Kakao API Key는 local.properties에서 관리 (BuildConfig.KAKAO_NATIVE_APP_KEY) -->
 
     <!-- Chat List -->
     <string name="chat_list_title">Chat Rooms</string>

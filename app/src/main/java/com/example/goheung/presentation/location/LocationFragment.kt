@@ -2,6 +2,8 @@ package com.example.goheung.presentation.location
 
 import android.Manifest
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -11,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -26,6 +29,7 @@ import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
+import com.kakao.vectormap.label.LabelStyles
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -167,26 +171,31 @@ class LocationFragment : Fragment() {
 
             try {
                 val latLng = LatLng.from(location.lat, location.lng)
-                Log.d(TAG, "Created LatLng: $latLng")
+                Log.d(TAG, "Created LatLng: $latLng, role=${location.role}")
 
-                // 라벨 스타일 생성 (Android 시스템 아이콘 사용)
-                val iconRes = if (isMe) {
-                    android.R.drawable.presence_online  // 파란색 온라인 표시
-                } else {
-                    android.R.drawable.presence_invisible  // 회색 표시
+                // 역할에 따라 다른 아이콘 사용
+                // - 운전기사(DRIVER): 버스 아이콘
+                // - 승객(PASSENGER): 동그라미 아이콘
+                val iconRes = when {
+                    location.role == "DRIVER" && isMe -> R.drawable.ic_bus_marker  // 내 버스 (파란색)
+                    location.role == "DRIVER" -> R.drawable.ic_bus_marker_gray     // 다른 버스 (회색)
+                    isMe -> R.drawable.ic_passenger_marker                         // 내 위치 (녹색 동그라미)
+                    else -> R.drawable.ic_passenger_marker                         // 다른 승객 (녹색 동그라미)
                 }
-
-                val labelStyle = LabelStyle.from(iconRes)
+                val bitmap = getBitmapFromVectorDrawable(iconRes)
                 val labelText = if (isMe) getString(R.string.my_location_label) else location.displayName
 
+                // LabelStyles로 스타일 생성 (Bitmap 사용)
+                val labelStyles = LabelStyles.from(LabelStyle.from(bitmap))
+
                 val labelOptions = LabelOptions.from(latLng).apply {
-                    setStyles(labelStyle)
+                    setStyles(labelStyles)
                     setTexts(labelText)
                 }
-                Log.d(TAG, "Created LabelOptions with style: $labelOptions")
+                Log.d(TAG, "Created LabelOptions with bitmap style, role=${location.role}")
 
                 val label = layer.addLabel(labelOptions)
-                Log.d(TAG, "Label added: $label (isMe=$isMe, text=$labelText)")
+                Log.d(TAG, "Label added: $label (isMe=$isMe, role=${location.role}, text=$labelText)")
 
                 if (label == null) {
                     Log.e(TAG, "addLabel returned null for ${location.uid}")
@@ -204,6 +213,22 @@ class LocationFragment : Fragment() {
         kakaoMap?.moveCamera(
             CameraUpdateFactory.newCenterPosition(LatLng.from(lat, lng), zoom)
         )
+    }
+
+    /**
+     * Vector Drawable을 Bitmap으로 변환
+     */
+    private fun getBitmapFromVectorDrawable(drawableId: Int): Bitmap {
+        val drawable = ContextCompat.getDrawable(requireContext(), drawableId)!!
+        val bitmap = Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private fun updateSpeedDisplay(speed: Float) {

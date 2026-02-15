@@ -43,10 +43,10 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="goheung_chat_messages" />
 
-        <!-- Kakao Map API Key -->
+        <!-- Kakao Map API Key (local.properties에서 관리) -->
         <meta-data
             android:name="com.kakao.sdk.AppKey"
-            android:value="@string/kakao_native_app_key" />
+            android:value="${KAKAO_NATIVE_APP_KEY}" />
     </application>
 
 </manifest>

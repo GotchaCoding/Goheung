@@ -45,6 +45,9 @@ class MoreViewModel @Inject constructor(
     private val _currentRole = MutableLiveData<UserRole>()
     val currentRole: LiveData<UserRole> = _currentRole
 
+    private val _roleUpdateSuccess = MutableLiveData<Boolean?>()
+    val roleUpdateSuccess: LiveData<Boolean?> = _roleUpdateSuccess
+
     init {
         loadProfile()
         observeCurrentAttendance()
@@ -96,15 +99,21 @@ class MoreViewModel @Inject constructor(
 
     fun updateRole(role: UserRole) {
         val uid = authRepository.currentUser?.uid ?: return
+        Log.d(TAG, "updateRole called with role=${role.name}, uid=$uid")
         viewModelScope.launch {
             _loading.value = true
+            _roleUpdateSuccess.value = null  // 초기화
             userRepository.updateUserRole(uid, role.name)
                 .onSuccess {
+                    Log.d(TAG, "Role updated successfully to ${role.name} in Firebase")
                     _currentRole.value = role
-                    Log.d(TAG, "Role updated to ${role.name}")
+                    _roleUpdateSuccess.value = true
+                    // 프로필도 함께 업데이트 (캐시된 값 갱신)
+                    _profile.value = _profile.value?.copy(role = role.name)
                 }
                 .onFailure { e ->
-                    Log.e(TAG, "Failed to update role", e)
+                    Log.e(TAG, "Failed to update role in Firebase", e)
+                    _roleUpdateSuccess.value = false
                 }
             _loading.value = false
         }

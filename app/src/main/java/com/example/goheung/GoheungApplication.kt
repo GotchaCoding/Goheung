@@ -16,7 +16,7 @@ class GoheungApplication : Application() {
         super.onCreate()
         notificationChannelManager.createNotificationChannels()
 
-        // 카카오맵 SDK 초기화
-        KakaoMapSdk.init(this, getString(R.string.kakao_native_app_key))
+        // 카카오맵 SDK 초기화 (API Key는 local.properties에서 관리)
+        KakaoMapSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)
     }
 }

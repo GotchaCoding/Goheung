@@ -1,11 +1,13 @@
 package com.example.goheung.presentation.more
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
@@ -21,6 +23,10 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MoreFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "MoreFragment"
+    }
 
     private var _binding: FragmentMoreBinding? = null
     private val binding get() = _binding!!
@@ -93,8 +99,13 @@ class MoreFragment : Fragment() {
                     position: Int,
                     id: Long
                 ) {
+                    val selectedRole = roles[position]
+                    Log.d(TAG, "onItemSelected: position=$position, role=${selectedRole.name}, isInitialized=$isRoleSpinnerInitialized")
+
                     if (isRoleSpinnerInitialized) {
-                        viewModel.updateRole(roles[position])
+                        Log.d(TAG, "Calling updateRole with ${selectedRole.name}")
+                        viewModel.updateRole(selectedRole)
+                        Toast.makeText(requireContext(), "역할 변경: ${selectedRole.displayName}", Toast.LENGTH_SHORT).show()
                     }
                     isRoleSpinnerInitialized = true
                 }
@@ -126,17 +137,29 @@ class MoreFragment : Fragment() {
         }
 
         viewModel.currentRole.observe(viewLifecycleOwner) { role ->
+            Log.d(TAG, "currentRole observer: role=${role.name}, setting isRoleSpinnerInitialized=false")
             isRoleSpinnerInitialized = false
             val roles = UserRole.values()
-            binding.spinnerRole.setSelection(roles.indexOf(role))
+            val index = roles.indexOf(role)
+            Log.d(TAG, "Setting spinner selection to index=$index (${role.name})")
+            binding.spinnerRole.setSelection(index)
         }
 
         viewModel.attendanceUpdateSuccess.observe(viewLifecycleOwner) { success ->
             success?.let {
                 // 필요시 Toast 표시
-                // if (it) {
-                //     Toast.makeText(requireContext(), "근무 상태가 변경되었습니다", Toast.LENGTH_SHORT).show()
-                // }
+            }
+        }
+
+        viewModel.roleUpdateSuccess.observe(viewLifecycleOwner) { success ->
+            success?.let {
+                if (it) {
+                    Log.d(TAG, "Role update SUCCESS - saved to Firebase")
+                    Toast.makeText(requireContext(), "역할이 저장되었습니다", Toast.LENGTH_SHORT).show()
+                } else {
+                    Log.e(TAG, "Role update FAILED")
+                    Toast.makeText(requireContext(), "역할 저장 실패", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.goheung.presentation.location
 
 import android.Manifest
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
@@ -9,6 +10,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -17,6 +19,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import com.example.goheung.util.LocationUtils
 import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.databinding.FragmentLocationBinding
@@ -45,6 +52,10 @@ class LocationFragment : Fragment() {
 
     private val viewModel: LocationViewModel by viewModels()
     private var kakaoMap: KakaoMap? = null
+
+    // 버스 추적 모드 상태
+    private var isTrackingBus = false
+    private var trackingJob: Job? = null
 
     @Inject
     lateinit var auth: FirebaseAuth
@@ -116,7 +127,10 @@ class LocationFragment : Fragment() {
 
         viewModel.myLocation.observe(viewLifecycleOwner) { myLocation ->
             myLocation?.let {
-                moveCameraToLocation(it.lat, it.lng)
+                // 버스 추적 중이 아닐 때만 카메라 자동 이동
+                if (!isTrackingBus) {
+                    moveCameraToLocation(it.lat, it.lng, zoom = 16)
+                }
             }
         }
 
@@ -133,10 +147,28 @@ class LocationFragment : Fragment() {
     }
 
     private fun setupListeners() {
+        // 기존 클릭: 내 위치로 이동
         binding.fabMyLocation.setOnClickListener {
             viewModel.myLocation.value?.let { myLocation ->
-                moveCameraToLocation(myLocation.lat, myLocation.lng, zoom = 15)
+                moveCameraToLocation(myLocation.lat, myLocation.lng, zoom = 16)
             }
+        }
+
+        // 롱클릭: 버스 추적 모드 시작
+        binding.fabMyLocation.setOnLongClickListener {
+            startBusTracking()
+            true
+        }
+
+        // 터치 해제 감지: 버스 추적 모드 종료
+        binding.fabMyLocation.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP ||
+                event.action == MotionEvent.ACTION_CANCEL) {
+                if (isTrackingBus) {
+                    stopBusTracking()
+                }
+            }
+            false  // 다른 리스너도 동작하도록 false 반환
         }
     }
 
@@ -239,6 +271,67 @@ class LocationFragment : Fragment() {
             binding.layoutSpeed.isVisible = true
         } else {
             binding.layoutSpeed.isVisible = false
+        }
+    }
+
+    /**
+     * 버스 추적 모드 시작
+     * - 가장 가까운 DRIVER 찾기
+     * - 1초마다 카메라 이동
+     */
+    private fun startBusTracking() {
+        isTrackingBus = true
+        Toast.makeText(requireContext(), "버스 추적 시작", Toast.LENGTH_SHORT).show()
+
+        // FAB 색상 변경으로 추적 중임을 표시
+        binding.fabMyLocation.backgroundTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.tracking_active))
+
+        trackingJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (isTrackingBus) {
+                trackNearestBus()
+                delay(1000L)  // 1초마다 업데이트
+            }
+        }
+    }
+
+    /**
+     * 버스 추적 모드 종료
+     */
+    private fun stopBusTracking() {
+        isTrackingBus = false
+        trackingJob?.cancel()
+        trackingJob = null
+        Toast.makeText(requireContext(), "버스 추적 종료", Toast.LENGTH_SHORT).show()
+
+        // FAB 색상 원복
+        binding.fabMyLocation.backgroundTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.fab_default))
+    }
+
+    /**
+     * 가장 가까운 버스 찾아서 카메라 이동
+     */
+    private fun trackNearestBus() {
+        val myLocation = viewModel.myLocation.value ?: return
+        val allLocations = viewModel.allLocations.value ?: return
+
+        // DRIVER 역할만 필터링 (자신 제외)
+        val nearestBus = allLocations
+            .filter { it.role == "DRIVER" && it.uid != auth.currentUser?.uid }
+            .minByOrNull { location ->
+                LocationUtils.calculateDistance(
+                    myLocation.lat, myLocation.lng,
+                    location.lat, location.lng
+                )
+            }
+
+        nearestBus?.let { bus ->
+            moveCameraToLocation(bus.lat, bus.lng, zoom = 16)
+            Log.d(TAG, "Tracking bus: ${bus.displayName} at (${bus.lat}, ${bus.lng})")
+        } ?: run {
+            Toast.makeText(requireContext(), "추적 가능한 버스가 없습니다", Toast.LENGTH_SHORT).show()
+            stopBusTracking()
         }
     }
 

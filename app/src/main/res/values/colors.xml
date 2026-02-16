@@ -38,4 +38,8 @@
     <color name="presenceOnline">#4CAF50</color>
     <color name="presenceOffline">#9E9E9E</color>
     <color name="presenceInChat">#2196F3</color>
+
+    <!-- FAB Colors -->
+    <color name="fab_default">#2196F3</color>
+    <color name="tracking_active">#FF5722</color>
 </resources>

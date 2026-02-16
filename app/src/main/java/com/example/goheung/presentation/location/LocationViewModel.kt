@@ -26,7 +26,7 @@ class LocationViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "LocationViewModel"
-        private const val LOCATION_UPDATE_INTERVAL = 5000L  // 5초
+        private const val LOCATION_UPDATE_INTERVAL = 1000L  // 1초
     }
 
     private val _allLocations = MutableLiveData<List<UserLocation>>()

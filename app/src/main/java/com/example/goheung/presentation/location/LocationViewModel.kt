@@ -6,12 +6,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.goheung.data.model.UserLocation
+import com.example.goheung.data.model.UserRole
 import com.example.goheung.data.repository.LocationRepository
 import com.example.goheung.data.repository.UserRepository
 import com.example.goheung.service.LocationService
 import com.example.goheung.util.LocationUtils
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,7 +29,8 @@ class LocationViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "LocationViewModel"
-        private const val LOCATION_UPDATE_INTERVAL = 1000L  // 1초
+        private const val LOCATION_UPDATE_INTERVAL = 1000L
+        private const val BUS_TRACKING_INTERVAL = 1000L
     }
 
     private val _allLocations = MutableLiveData<List<UserLocation>>()
@@ -50,7 +54,15 @@ class LocationViewModel @Inject constructor(
     private val _myBearing = MutableLiveData<Float?>()
     val myBearing: LiveData<Float?> = _myBearing
 
+    // 버스 추적 상태
+    private val _isTrackingBus = MutableLiveData(false)
+    val isTrackingBus: LiveData<Boolean> = _isTrackingBus
+
+    private val _nearestBus = MutableLiveData<UserLocation?>()
+    val nearestBus: LiveData<UserLocation?> = _nearestBus
+
     private var previousBearing: Float? = null
+    private var trackingJob: Job? = null
 
     init {
         observeLocations()
@@ -89,53 +101,103 @@ class LocationViewModel @Inject constructor(
     private fun calculateArrivalTime(locations: List<UserLocation>) {
         val currentUid = auth.currentUser?.uid ?: return
         val myLocation = locations.find { it.uid == currentUid } ?: return
+        val role = UserRole.fromString(myLocation.role)
 
-        when (myLocation.role) {
-            "PASSENGER" -> {
-                // 승객: 가장 가까운 운전기사까지의 시간
-                val driver = locations
-                    .filter { it.role == "DRIVER" }
-                    .minByOrNull {
-                        LocationUtils.calculateDistance(
-                            myLocation.lat, myLocation.lng,
-                            it.lat, it.lng
-                        )
-                    }
-
-                if (driver != null) {
+        when (role) {
+            UserRole.PASSENGER -> {
+                val driver = findNearestByRole(locations, myLocation, UserRole.DRIVER)
+                _arrivalTime.value = driver?.let {
                     val distance = LocationUtils.calculateDistance(
-                        driver.lat, driver.lng,
-                        myLocation.lat, myLocation.lng
+                        it.lat, it.lng, myLocation.lat, myLocation.lng
                     )
-                    _arrivalTime.value = LocationUtils.formatArrivalTime(distance)
-                } else {
-                    _arrivalTime.value = null
+                    LocationUtils.formatArrivalTime(distance)
                 }
             }
-            "DRIVER" -> {
-                // 운전기사: 가장 가까운 승객까지의 시간
-                val passenger = locations
-                    .filter { it.role == "PASSENGER" }
-                    .minByOrNull {
-                        LocationUtils.calculateDistance(
-                            myLocation.lat, myLocation.lng,
-                            it.lat, it.lng
-                        )
-                    }
-
-                if (passenger != null) {
+            UserRole.DRIVER -> {
+                val passenger = findNearestByRole(locations, myLocation, UserRole.PASSENGER)
+                _arrivalTime.value = passenger?.let {
                     val distance = LocationUtils.calculateDistance(
-                        myLocation.lat, myLocation.lng,
-                        passenger.lat, passenger.lng
+                        myLocation.lat, myLocation.lng, it.lat, it.lng
                     )
-                    _arrivalTime.value = "가장 가까운 승객: ${LocationUtils.formatArrivalTime(distance)}"
-                } else {
-                    _arrivalTime.value = null
+                    LocationUtils.formatArrivalTime(distance)
                 }
             }
-            else -> {
-                _arrivalTime.value = null
+            else -> _arrivalTime.value = null
+        }
+    }
+
+    /**
+     * 특정 역할의 가장 가까운 사용자 찾기
+     */
+    private fun findNearestByRole(
+        locations: List<UserLocation>,
+        myLocation: UserLocation,
+        targetRole: UserRole
+    ): UserLocation? {
+        return locations
+            .filter { UserRole.fromString(it.role) == targetRole && it.uid != myLocation.uid }
+            .minByOrNull { location ->
+                LocationUtils.calculateDistance(
+                    myLocation.lat, myLocation.lng,
+                    location.lat, location.lng
+                )
             }
+    }
+
+    /**
+     * 버스 추적 시작
+     */
+    fun startBusTracking() {
+        _isTrackingBus.value = true
+        trackingJob = viewModelScope.launch {
+            while (_isTrackingBus.value == true) {
+                updateNearestBus()
+                delay(BUS_TRACKING_INTERVAL)
+            }
+        }
+    }
+
+    /**
+     * 버스 추적 종료
+     */
+    fun stopBusTracking() {
+        _isTrackingBus.value = false
+        trackingJob?.cancel()
+        trackingJob = null
+        _nearestBus.value = null
+    }
+
+    /**
+     * 가장 가까운 버스 업데이트
+     */
+    private fun updateNearestBus() {
+        val myLocation = _myLocation.value ?: return
+        val allLocations = _allLocations.value ?: return
+        val currentUid = auth.currentUser?.uid
+
+        val nearest = allLocations
+            .filter { UserRole.fromString(it.role) == UserRole.DRIVER && it.uid != currentUid }
+            .minByOrNull { location ->
+                LocationUtils.calculateDistance(
+                    myLocation.lat, myLocation.lng,
+                    location.lat, location.lng
+                )
+            }
+
+        _nearestBus.value = nearest
+        if (nearest != null) {
+            Log.d(TAG, "Tracking bus: ${nearest.displayName} at (${nearest.lat}, ${nearest.lng})")
+        }
+    }
+
+    /**
+     * 추적 가능한 버스 존재 여부
+     */
+    fun hasAvailableBus(): Boolean {
+        val allLocations = _allLocations.value ?: return false
+        val currentUid = auth.currentUser?.uid
+        return allLocations.any {
+            UserRole.fromString(it.role) == UserRole.DRIVER && it.uid != currentUid
         }
     }
 

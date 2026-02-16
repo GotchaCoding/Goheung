@@ -96,6 +96,11 @@
     <string name="my_location">내 위치</string>
     <string name="speed_unit_kmh">km/h</string>
     <string name="my_location_label">내 위치</string>
+    <string name="map_load_failed">지도 로드 실패: %1$s</string>
+    <string name="bus_tracking_started">버스 추적 시작</string>
+    <string name="bus_tracking_stopped">버스 추적 종료</string>
+    <string name="no_bus_available">추적 가능한 버스가 없습니다</string>
+    <string name="nearest_passenger_arrival">가장 가까운 승객: %1$s</string>
 
     <!-- Role -->
     <string name="role_label">역할</string>

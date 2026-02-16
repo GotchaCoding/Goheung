@@ -19,11 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import com.example.goheung.util.LocationUtils
+import com.example.goheung.data.model.UserRole
 import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.databinding.FragmentLocationBinding
@@ -45,6 +41,10 @@ class LocationFragment : Fragment() {
 
     companion object {
         private const val TAG = "LocationFragment"
+        private const val DEFAULT_ZOOM = 16
+        private const val INITIAL_ZOOM = 12
+        private const val GOHEUNG_LAT = 34.8118
+        private const val GOHEUNG_LNG = 127.6869
     }
 
     private var _binding: FragmentLocationBinding? = null
@@ -52,10 +52,6 @@ class LocationFragment : Fragment() {
 
     private val viewModel: LocationViewModel by viewModels()
     private var kakaoMap: KakaoMap? = null
-
-    // 버스 추적 모드 상태
-    private var isTrackingBus = false
-    private var trackingJob: Job? = null
 
     @Inject
     lateinit var auth: FirebaseAuth
@@ -99,14 +95,17 @@ class LocationFragment : Fragment() {
             }
 
             override fun onMapError(error: Exception) {
-                Toast.makeText(requireContext(), "지도 로드 실패: ${error.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.map_load_failed, error.message),
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }, object : KakaoMapReadyCallback() {
             override fun onMapReady(map: KakaoMap) {
                 kakaoMap = map
-                // 고흥군 중심 좌표로 초기화 (예: 34.8118, 127.6869)
-                val goheungCenter = LatLng.from(34.8118, 127.6869)
-                map.moveCamera(CameraUpdateFactory.newCenterPosition(goheungCenter, 12))
+                val goheungCenter = LatLng.from(GOHEUNG_LAT, GOHEUNG_LNG)
+                map.moveCamera(CameraUpdateFactory.newCenterPosition(goheungCenter, INITIAL_ZOOM))
             }
         })
     }
@@ -128,8 +127,8 @@ class LocationFragment : Fragment() {
         viewModel.myLocation.observe(viewLifecycleOwner) { myLocation ->
             myLocation?.let {
                 // 버스 추적 중이 아닐 때만 카메라 자동 이동
-                if (!isTrackingBus) {
-                    moveCameraToLocation(it.lat, it.lng, zoom = 16)
+                if (viewModel.isTrackingBus.value != true) {
+                    moveCameraToLocation(it.lat, it.lng, zoom = DEFAULT_ZOOM)
                 }
             }
         }
@@ -144,13 +143,31 @@ class LocationFragment : Fragment() {
                 viewModel.clearErrorMessage()
             }
         }
+
+        // 버스 추적 상태 관찰
+        viewModel.isTrackingBus.observe(viewLifecycleOwner) { isTracking ->
+            updateTrackingUI(isTracking)
+        }
+
+        // 가장 가까운 버스 위치 관찰
+        viewModel.nearestBus.observe(viewLifecycleOwner) { bus ->
+            bus?.let {
+                moveCameraToLocation(it.lat, it.lng, zoom = DEFAULT_ZOOM)
+            }
+        }
+    }
+
+    private fun updateTrackingUI(isTracking: Boolean) {
+        val colorRes = if (isTracking) R.color.tracking_active else R.color.fab_default
+        binding.fabMyLocation.backgroundTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), colorRes))
     }
 
     private fun setupListeners() {
         // 기존 클릭: 내 위치로 이동
         binding.fabMyLocation.setOnClickListener {
             viewModel.myLocation.value?.let { myLocation ->
-                moveCameraToLocation(myLocation.lat, myLocation.lng, zoom = 16)
+                moveCameraToLocation(myLocation.lat, myLocation.lng, zoom = DEFAULT_ZOOM)
             }
         }
 
@@ -164,7 +181,7 @@ class LocationFragment : Fragment() {
         binding.fabMyLocation.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP ||
                 event.action == MotionEvent.ACTION_CANCEL) {
-                if (isTrackingBus) {
+                if (viewModel.isTrackingBus.value == true) {
                     stopBusTracking()
                 }
             }
@@ -173,72 +190,42 @@ class LocationFragment : Fragment() {
     }
 
     private fun updateMarkers(locations: List<UserLocation>) {
-        val map = kakaoMap ?: run {
-            Log.w(TAG, "updateMarkers: kakaoMap is null")
-            return
-        }
+        val map = kakaoMap ?: return
         val currentUid = auth.currentUser?.uid
-        Log.d(TAG, "updateMarkers: locations=${locations.size}, currentUid=$currentUid")
-        Log.d(TAG, "updateMarkers: labelManager=${map.labelManager}, layer=${map.labelManager?.layer}")
-
-        // labelManager나 layer가 null이면 리턴
-        val labelManager = map.labelManager
-        if (labelManager == null) {
-            Log.e(TAG, "labelManager is null!")
-            return
-        }
-
-        val layer = labelManager.layer
-        if (layer == null) {
-            Log.e(TAG, "layer is null!")
-            return
-        }
+        val labelManager = map.labelManager ?: return
+        val layer = labelManager.layer ?: return
 
         layer.removeAll()
-        Log.d(TAG, "Removed all existing labels")
 
         locations.forEach { location ->
             val isMe = location.uid == currentUid
-            Log.d(TAG, "Adding marker: uid=${location.uid}, isMe=$isMe, lat=${location.lat}, lng=${location.lng}")
+            val role = UserRole.fromString(location.role)
 
             try {
                 val latLng = LatLng.from(location.lat, location.lng)
-                Log.d(TAG, "Created LatLng: $latLng, role=${location.role}")
-
-                // 역할에 따라 다른 아이콘 사용
-                // - 운전기사(DRIVER): 버스 아이콘
-                // - 승객(PASSENGER): 동그라미 아이콘
-                val iconRes = when {
-                    location.role == "DRIVER" && isMe -> R.drawable.ic_bus_marker  // 내 버스 (파란색)
-                    location.role == "DRIVER" -> R.drawable.ic_bus_marker_gray     // 다른 버스 (회색)
-                    isMe -> R.drawable.ic_passenger_marker                         // 내 위치 (녹색 동그라미)
-                    else -> R.drawable.ic_passenger_marker                         // 다른 승객 (녹색 동그라미)
-                }
+                val iconRes = getMarkerIcon(role, isMe)
                 val bitmap = getBitmapFromVectorDrawable(iconRes)
                 val labelText = if (isMe) getString(R.string.my_location_label) else location.displayName
-
-                // LabelStyles로 스타일 생성 (Bitmap 사용)
                 val labelStyles = LabelStyles.from(LabelStyle.from(bitmap))
 
                 val labelOptions = LabelOptions.from(latLng).apply {
                     setStyles(labelStyles)
                     setTexts(labelText)
                 }
-                Log.d(TAG, "Created LabelOptions with bitmap style, role=${location.role}")
 
-                val label = layer.addLabel(labelOptions)
-                Log.d(TAG, "Label added: $label (isMe=$isMe, role=${location.role}, text=$labelText)")
-
-                if (label == null) {
-                    Log.e(TAG, "addLabel returned null for ${location.uid}")
-                }
+                layer.addLabel(labelOptions)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to add label for ${location.uid}", e)
-                e.printStackTrace()
             }
         }
+    }
 
-        Log.d(TAG, "Total labels on layer: ${layer.labelCount}")
+    private fun getMarkerIcon(role: UserRole, isMe: Boolean): Int {
+        return when {
+            role == UserRole.DRIVER && isMe -> R.drawable.ic_bus_marker
+            role == UserRole.DRIVER -> R.drawable.ic_bus_marker_gray
+            else -> R.drawable.ic_passenger_marker
+        }
     }
 
     private fun moveCameraToLocation(lat: Double, lng: Double, zoom: Int = 14) {
@@ -274,65 +261,18 @@ class LocationFragment : Fragment() {
         }
     }
 
-    /**
-     * 버스 추적 모드 시작
-     * - 가장 가까운 DRIVER 찾기
-     * - 1초마다 카메라 이동
-     */
     private fun startBusTracking() {
-        isTrackingBus = true
-        Toast.makeText(requireContext(), "버스 추적 시작", Toast.LENGTH_SHORT).show()
-
-        // FAB 색상 변경으로 추적 중임을 표시
-        binding.fabMyLocation.backgroundTintList =
-            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.tracking_active))
-
-        trackingJob = viewLifecycleOwner.lifecycleScope.launch {
-            while (isTrackingBus) {
-                trackNearestBus()
-                delay(1000L)  // 1초마다 업데이트
-            }
+        if (!viewModel.hasAvailableBus()) {
+            Toast.makeText(requireContext(), R.string.no_bus_available, Toast.LENGTH_SHORT).show()
+            return
         }
+        viewModel.startBusTracking()
+        Toast.makeText(requireContext(), R.string.bus_tracking_started, Toast.LENGTH_SHORT).show()
     }
 
-    /**
-     * 버스 추적 모드 종료
-     */
     private fun stopBusTracking() {
-        isTrackingBus = false
-        trackingJob?.cancel()
-        trackingJob = null
-        Toast.makeText(requireContext(), "버스 추적 종료", Toast.LENGTH_SHORT).show()
-
-        // FAB 색상 원복
-        binding.fabMyLocation.backgroundTintList =
-            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.fab_default))
-    }
-
-    /**
-     * 가장 가까운 버스 찾아서 카메라 이동
-     */
-    private fun trackNearestBus() {
-        val myLocation = viewModel.myLocation.value ?: return
-        val allLocations = viewModel.allLocations.value ?: return
-
-        // DRIVER 역할만 필터링 (자신 제외)
-        val nearestBus = allLocations
-            .filter { it.role == "DRIVER" && it.uid != auth.currentUser?.uid }
-            .minByOrNull { location ->
-                LocationUtils.calculateDistance(
-                    myLocation.lat, myLocation.lng,
-                    location.lat, location.lng
-                )
-            }
-
-        nearestBus?.let { bus ->
-            moveCameraToLocation(bus.lat, bus.lng, zoom = 16)
-            Log.d(TAG, "Tracking bus: ${bus.displayName} at (${bus.lat}, ${bus.lng})")
-        } ?: run {
-            Toast.makeText(requireContext(), "추적 가능한 버스가 없습니다", Toast.LENGTH_SHORT).show()
-            stopBusTracking()
-        }
+        viewModel.stopBusTracking()
+        Toast.makeText(requireContext(), R.string.bus_tracking_stopped, Toast.LENGTH_SHORT).show()
     }
 
     private fun requestLocationPermission() {

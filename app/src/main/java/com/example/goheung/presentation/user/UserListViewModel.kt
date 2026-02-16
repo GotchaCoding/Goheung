@@ -56,47 +56,69 @@ class UserListViewModel @Inject constructor(
         val currentUid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _loading.value = true
-
-            userRepository.getAllUsers(excludeUid = currentUid).collect { result ->
-                result.onSuccess { users ->
-                    // 각 사용자의 Presence와 Attendance를 결합
-                    val profileFlows = users.map { user ->
-                        combine(
-                            presenceRepository.observePresence(user.uid),
-                            attendanceRepository.observeAttendance(user.uid)
-                        ) { presence, attendance ->
-                            UserProfile(user, presence, attendance)
-                        }
-                    }
-
-                    // 모든 Flow 결합
-                    if (profileFlows.isEmpty()) {
-                        allUserProfiles = emptyList()
-                        _userProfiles.value = emptyList()
-                        _loading.value = false
-                    } else {
-                        combine(profileFlows) { it.toList() }
-                            .collect { profiles ->
-                                allUserProfiles = profiles
-
-                                // 현재 검색어가 있으면 필터링 적용
-                                val currentQuery = _searchQuery.value ?: ""
-                                if (currentQuery.isEmpty()) {
-                                    _userProfiles.value = profiles
-                                } else {
-                                    performSearch(currentQuery)
-                                }
-
-                                _loading.value = false
-                            }
+            try {
+                userRepository.getAllUsers(excludeUid = currentUid).collect { result ->
+                    result.onSuccess { users ->
+                        observeUserProfilesWithRealtimeData(users)
+                    }.onFailure { exception ->
+                        handleLoadError(exception)
                     }
                 }
-                .onFailure {
-                    _error.value = it.message
-                    _loading.value = false
-                }
+            } catch (e: Exception) {
+                handleLoadError(e)
             }
         }
+    }
+
+    /**
+     * 각 사용자의 Presence와 Attendance를 실시간으로 관찰하고 UserProfile로 결합
+     */
+    private suspend fun observeUserProfilesWithRealtimeData(users: List<User>) {
+        if (users.isEmpty()) {
+            updateProfileList(emptyList())
+            _loading.value = false
+            return
+        }
+
+        val profileFlows = users.map { user -> createUserProfileFlow(user) }
+        combine(profileFlows) { it.toList() }
+            .collect { profiles ->
+                updateProfileList(profiles)
+                _loading.value = false
+            }
+    }
+
+    /**
+     * 단일 사용자의 Profile Flow 생성
+     */
+    private fun createUserProfileFlow(user: User): kotlinx.coroutines.flow.Flow<UserProfile> {
+        return combine(
+            presenceRepository.observePresence(user.uid),
+            attendanceRepository.observeAttendance(user.uid)
+        ) { presence, attendance ->
+            UserProfile(user, presence, attendance)
+        }
+    }
+
+    /**
+     * 프로필 목록 업데이트 (검색 필터링 포함)
+     */
+    private fun updateProfileList(profiles: List<UserProfile>) {
+        allUserProfiles = profiles
+        val currentQuery = _searchQuery.value.orEmpty()
+        if (currentQuery.isEmpty()) {
+            _userProfiles.value = profiles
+        } else {
+            performSearch(currentQuery)
+        }
+    }
+
+    /**
+     * 로딩 에러 처리
+     */
+    private fun handleLoadError(exception: Throwable) {
+        _error.value = exception.message ?: "알 수 없는 오류가 발생했습니다"
+        _loading.value = false
     }
 
     private fun setupPresenceForCurrentUser() {

@@ -71,6 +71,19 @@
     <string name="direct_messages">Direct Messages</string>
     <string name="group_chats">Group Chats</string>
 
+    <!-- Leave Chat Room -->
+    <string name="leave_chat_room_title">채팅방 나가기</string>
+    <string name="leave_chat_room_group_message">채팅방을 나가시겠습니까?\n나가기 시 대화 내용이 삭제되고 채팅 목록에서 삭제됩니다.</string>
+    <string name="leave_chat_room_dm_message">채팅방을 나가시겠습니까?\n채팅방은 목록에서 삭제되지만 상대방이 메시지를 보내면 다시 나타납니다.</string>
+    <string name="leave">나가기</string>
+
+    <!-- Invite Users -->
+    <string name="no_users_to_invite">초대할 수 있는 사용자가 없습니다</string>
+    <string name="select_at_least_one">최소 1명 이상 선택해주세요</string>
+    <string name="group_chat_min_users">그룹 채팅에는 최소 2명 이상 초대해야 합니다</string>
+    <string name="users_invited">%1$d명을 초대했습니다</string>
+    <string name="failed_to_load_users">사용자 목록을 불러올 수 없습니다: %1$s</string>
+
     <!-- Presence -->
     <string name="presence_active">활성</string>
     <string name="presence_in_chat">대화 중</string>

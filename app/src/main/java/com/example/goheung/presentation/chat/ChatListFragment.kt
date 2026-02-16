@@ -2,7 +2,6 @@ package com.example.goheung.presentation.chat
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,7 +24,8 @@ import javax.inject.Inject
 class ChatListFragment : Fragment() {
 
     companion object {
-        private const val TAG = "ChatListFragment"
+        private const val DIALOG_PADDING_HORIZONTAL = 64
+        private const val DIALOG_PADDING_VERTICAL = 32
     }
 
     private var _binding: FragmentChatListBinding? = null
@@ -104,12 +104,7 @@ class ChatListFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        Log.d(TAG, "setupObservers: Setting up observers")
         viewModel.directChats.observe(viewLifecycleOwner) { directChats ->
-            Log.d(TAG, "directChats observer: received ${directChats.size} items")
-            directChats.forEachIndexed { index, item ->
-                Log.d(TAG, "  DM[$index]: ${item.displayName}")
-            }
             directMessagesAdapter.submitList(directChats)
             binding.textViewDirectMessagesHeader.isVisible = directChats.isNotEmpty()
             binding.recyclerViewDirectMessages.isVisible = directChats.isNotEmpty()
@@ -117,10 +112,6 @@ class ChatListFragment : Fragment() {
         }
 
         viewModel.groupChats.observe(viewLifecycleOwner) { groupChats ->
-            Log.d(TAG, "groupChats observer: received ${groupChats.size} items")
-            groupChats.forEachIndexed { index, item ->
-                Log.d(TAG, "  Group[$index]: ${item.displayName}")
-            }
             groupChatsAdapter.submitList(groupChats)
             binding.textViewGroupChatsHeader.isVisible = groupChats.isNotEmpty()
             binding.recyclerViewGroupChats.isVisible = groupChats.isNotEmpty()
@@ -161,7 +152,12 @@ class ChatListFragment : Fragment() {
     private fun showCreateChatRoomDialog() {
         val editText = EditText(requireContext()).apply {
             hint = getString(R.string.chat_room_name_hint)
-            setPadding(64, 32, 64, 32)
+            setPadding(
+                DIALOG_PADDING_HORIZONTAL,
+                DIALOG_PADDING_VERTICAL,
+                DIALOG_PADDING_HORIZONTAL,
+                DIALOG_PADDING_VERTICAL
+            )
         }
 
         AlertDialog.Builder(requireContext())
@@ -182,16 +178,16 @@ class ChatListFragment : Fragment() {
     }
 
     private fun showLeaveChatRoomDialog(item: ChatListViewModel.ChatRoomWithParticipants) {
-        val message = if (item.chatRoom.isGroup()) {
-            "채팅방을 나가시겠습니까?\n나가기 시 대화 내용이 삭제되고 채팅 목록에서 삭제됩니다."
+        val messageRes = if (item.chatRoom.isGroup()) {
+            R.string.leave_chat_room_group_message
         } else {
-            "채팅방을 나가시겠습니까?\n채팅방은 목록에서 삭제되지만 상대방이 메시지를 보내면 다시 나타납니다."
+            R.string.leave_chat_room_dm_message
         }
 
         AlertDialog.Builder(requireContext())
-            .setTitle("채팅방 나가기")
-            .setMessage(message)
-            .setPositiveButton("나가기") { _, _ ->
+            .setTitle(R.string.leave_chat_room_title)
+            .setMessage(messageRes)
+            .setPositiveButton(R.string.leave) { _, _ ->
                 viewModel.leaveChatRoom(item.chatRoom.id, item.chatRoom.type)
             }
             .setNegativeButton(R.string.cancel, null)
@@ -211,7 +207,6 @@ class ChatListFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // 채팅방에서 돌아왔을 때 읽지 않은 메시지 개수 새로고침
         viewModel.refreshUnreadCounts()
     }
 

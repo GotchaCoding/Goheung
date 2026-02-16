@@ -2,7 +2,6 @@ package com.example.goheung.presentation.chat
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +14,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.goheung.R
+import com.example.goheung.data.model.User
 import com.example.goheung.databinding.FragmentChatDetailBinding
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,9 +26,10 @@ import javax.inject.Inject
 class ChatDetailFragment : Fragment() {
 
     companion object {
-        private const val TAG = "ChatDetailFragment"
         private const val ARG_CHAT_ROOM_ID = "chatRoomId"
         private const val ARG_CHAT_ROOM_NAME = "chatRoomName"
+        private const val DIALOG_PADDING_HORIZONTAL = 64
+        private const val DIALOG_PADDING_VERTICAL = 32
 
         fun newInstance(chatRoomId: String, chatRoomName: String): ChatDetailFragment {
             return ChatDetailFragment().apply {
@@ -82,12 +83,8 @@ class ChatDetailFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        // 메뉴 inflate
         binding.toolbar.inflateMenu(R.menu.menu_chat_detail)
-        Log.d(TAG, "setupToolbar: Menu inflated, items count = ${binding.toolbar.menu.size()}")
-
         binding.toolbar.setOnMenuItemClickListener { menuItem ->
-            Log.d(TAG, "Menu item clicked: ${menuItem.itemId}")
             when (menuItem.itemId) {
                 R.id.action_invite_users -> {
                     showInviteUsersDialog()
@@ -140,29 +137,19 @@ class ChatDetailFragment : Fragment() {
         }
 
         viewModel.chatRoom.observe(viewLifecycleOwner) { chatRoom ->
-            Log.d(TAG, "chatRoom observer: name=${chatRoom.name}, participants=${chatRoom.participants.size}")
             binding.toolbar.title = chatRoom.name
-
-            // 그룹 채팅만 초대 및 편집 메뉴 표시
-            val isGroupChat = viewModel.canEditChatName()
-            Log.d(TAG, "chatRoom observer: isGroupChat=$isGroupChat, canEditChatName=${viewModel.canEditChatName()}")
-
-            val inviteItem = binding.toolbar.menu.findItem(R.id.action_invite_users)
-            val editItem = binding.toolbar.menu.findItem(R.id.action_edit_chat_name)
-
-            Log.d(TAG, "Menu items - invite: ${inviteItem != null}, edit: ${editItem != null}")
-
-            inviteItem?.isVisible = isGroupChat
-            editItem?.isVisible = isGroupChat
-
-            Log.d(TAG, "Menu visibility set - invite: ${inviteItem?.isVisible}, edit: ${editItem?.isVisible}")
+            updateMenuVisibility(viewModel.canEditChatName())
         }
 
-        // 참여자 정보 표시
         viewModel.participantsDisplay.observe(viewLifecycleOwner) { displayText ->
             binding.textViewParticipants.text = displayText
             binding.textViewParticipants.isVisible = displayText.isNotBlank()
         }
+    }
+
+    private fun updateMenuVisibility(isGroupChat: Boolean) {
+        binding.toolbar.menu.findItem(R.id.action_invite_users)?.isVisible = isGroupChat
+        binding.toolbar.menu.findItem(R.id.action_edit_chat_name)?.isVisible = isGroupChat
     }
 
     private fun setupListeners() {
@@ -188,8 +175,13 @@ class ChatDetailFragment : Fragment() {
         val editText = EditText(requireContext()).apply {
             hint = getString(R.string.chat_room_name_hint)
             setText(currentName)
-            setPadding(64, 32, 64, 32)
-            selectAll() // 전체 선택으로 빠른 편집 지원
+            setPadding(
+                DIALOG_PADDING_HORIZONTAL,
+                DIALOG_PADDING_VERTICAL,
+                DIALOG_PADDING_HORIZONTAL,
+                DIALOG_PADDING_VERTICAL
+            )
+            selectAll()
         }
 
         AlertDialog.Builder(requireContext())
@@ -208,71 +200,66 @@ class ChatDetailFragment : Fragment() {
     private fun showInviteUsersDialog() {
         val currentParticipants = viewModel.chatRoom.value?.participants ?: emptyList()
 
-        // 비동기로 사용자 목록 가져오기
         lifecycleScope.launch {
             val result = userRepository.getAllUsers(currentUserId).first()
             result.fold(
                 onSuccess = { allUsers ->
-                    // 현재 채팅방에 없는 사용자만 필터링
-                    val availableUsers = allUsers.filter { user ->
-                        user.uid !in currentParticipants
-                    }
+                    val availableUsers = allUsers.filter { it.uid !in currentParticipants }
 
                     if (availableUsers.isEmpty()) {
-                        Toast.makeText(requireContext(), "초대할 수 있는 사용자가 없습니다", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), R.string.no_users_to_invite, Toast.LENGTH_SHORT).show()
                         return@fold
                     }
 
-                    // 사용자 선택 Dialog 표시
-                    val userNames = availableUsers.map { it.displayName }.toTypedArray()
-                    val selectedUsers = BooleanArray(availableUsers.size) { false }
-
-                    AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.select_users_to_invite)
-                        .setMultiChoiceItems(userNames, selectedUsers) { _, which, isChecked ->
-                            selectedUsers[which] = isChecked
-                        }
-                        .setPositiveButton(R.string.invite) { _, _ ->
-                            val invitedUserIds = availableUsers
-                                .filterIndexed { index, _ -> selectedUsers[index] }
-                                .map { it.uid }
-
-                            when {
-                                invitedUserIds.isEmpty() -> {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "최소 1명 이상 선택해주세요",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                invitedUserIds.size == 1 -> {
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "그룹 채팅에는 최소 2명 이상 초대해야 합니다",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                                else -> {
-                                    viewModel.inviteUsers(invitedUserIds)
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "${invitedUserIds.size}명을 초대했습니다",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        }
-                        .setNegativeButton(R.string.cancel, null)
-                        .show()
+                    showUserSelectionDialog(availableUsers)
                 },
                 onFailure = { e ->
                     Toast.makeText(
                         requireContext(),
-                        "사용자 목록을 불러올 수 없습니다: ${e.message}",
+                        getString(R.string.failed_to_load_users, e.message),
                         Toast.LENGTH_LONG
                     ).show()
                 }
             )
+        }
+    }
+
+    private fun showUserSelectionDialog(availableUsers: List<User>) {
+        val userNames = availableUsers.map { it.displayName }.toTypedArray()
+        val selectedUsers = BooleanArray(availableUsers.size) { false }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.select_users_to_invite)
+            .setMultiChoiceItems(userNames, selectedUsers) { _, which, isChecked ->
+                selectedUsers[which] = isChecked
+            }
+            .setPositiveButton(R.string.invite) { _, _ ->
+                handleUserInvitation(availableUsers, selectedUsers)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun handleUserInvitation(availableUsers: List<User>, selectedUsers: BooleanArray) {
+        val invitedUserIds = availableUsers
+            .filterIndexed { index, _ -> selectedUsers[index] }
+            .map { it.uid }
+
+        when {
+            invitedUserIds.isEmpty() -> {
+                Toast.makeText(requireContext(), R.string.select_at_least_one, Toast.LENGTH_SHORT).show()
+            }
+            invitedUserIds.size == 1 -> {
+                Toast.makeText(requireContext(), R.string.group_chat_min_users, Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                viewModel.inviteUsers(invitedUserIds)
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.users_invited, invitedUserIds.size),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 

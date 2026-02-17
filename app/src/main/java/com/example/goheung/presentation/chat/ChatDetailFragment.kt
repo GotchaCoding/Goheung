@@ -25,22 +25,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class ChatDetailFragment : Fragment() {
 
-    companion object {
-        private const val ARG_CHAT_ROOM_ID = "chatRoomId"
-        private const val ARG_CHAT_ROOM_NAME = "chatRoomName"
-        private const val DIALOG_PADDING_HORIZONTAL = 64
-        private const val DIALOG_PADDING_VERTICAL = 32
-
-        fun newInstance(chatRoomId: String, chatRoomName: String): ChatDetailFragment {
-            return ChatDetailFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_CHAT_ROOM_ID, chatRoomId)
-                    putString(ARG_CHAT_ROOM_NAME, chatRoomName)
-                }
-            }
-        }
-    }
-
     private var _binding: FragmentChatDetailBinding? = null
     private val binding get() = _binding!!
 
@@ -58,6 +42,8 @@ class ChatDetailFragment : Fragment() {
 
     private val currentUserName: String
         get() = firebaseAuth.currentUser?.displayName ?: ""
+
+    private var isTyping = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -145,6 +131,15 @@ class ChatDetailFragment : Fragment() {
             binding.textViewParticipants.text = displayText
             binding.textViewParticipants.isVisible = displayText.isNotBlank()
         }
+
+        // Typing indicator observer
+        viewModel.typingUsers.observe(viewLifecycleOwner) { typingList ->
+            binding.textViewTypingIndicator.isVisible = typingList.isNotEmpty()
+            if (typingList.isNotEmpty()) {
+                val names = typingList.joinToString(", ") { it.userName }
+                binding.textViewTypingIndicator.text = getString(R.string.typing_indicator, names)
+            }
+        }
     }
 
     private fun updateMenuVisibility(isGroupChat: Boolean) {
@@ -155,11 +150,25 @@ class ChatDetailFragment : Fragment() {
     private fun setupListeners() {
         binding.editTextMessage.doAfterTextChanged { text ->
             binding.buttonSend.isEnabled = !text.isNullOrBlank()
+
+            // Typing indicator logic
+            val nowTyping = !text.isNullOrBlank()
+            if (nowTyping != isTyping) {
+                isTyping = nowTyping
+                viewModel.notifyTypingStatus(isTyping)
+            } else if (nowTyping) {
+                // Reset typing timeout on continued typing
+                viewModel.notifyTypingStatus(true)
+            }
         }
 
         binding.buttonSend.setOnClickListener {
             val messageText = binding.editTextMessage.text.toString()
             if (messageText.isNotBlank()) {
+                // Clear typing status before sending
+                isTyping = false
+                viewModel.notifyTypingStatus(false)
+
                 viewModel.sendMessage(
                     text = messageText,
                     userId = currentUserId,
@@ -266,10 +275,34 @@ class ChatDetailFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.markMessagesAsRead(currentUserId)
+        viewModel.initTypingStatus(currentUserId, currentUserName)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Clear typing status when leaving
+        isTyping = false
+        viewModel.cleanupTypingStatus()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private const val ARG_CHAT_ROOM_ID = "chatRoomId"
+        private const val ARG_CHAT_ROOM_NAME = "chatRoomName"
+        private const val DIALOG_PADDING_HORIZONTAL = 64
+        private const val DIALOG_PADDING_VERTICAL = 32
+
+        fun newInstance(chatRoomId: String, chatRoomName: String): ChatDetailFragment {
+            return ChatDetailFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_CHAT_ROOM_ID, chatRoomId)
+                    putString(ARG_CHAT_ROOM_NAME, chatRoomName)
+                }
+            }
+        }
     }
 }

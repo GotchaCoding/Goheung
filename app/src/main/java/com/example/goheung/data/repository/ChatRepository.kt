@@ -5,12 +5,18 @@ import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.data.model.Message
 import com.example.goheung.data.model.MessageType
+import com.example.goheung.data.model.TypingStatus
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,10 +26,14 @@ import javax.inject.Singleton
  */
 @Singleton
 class ChatRepository @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val realtimeDatabase: FirebaseDatabase
 ) {
     companion object {
         private const val TAG = "ChatRepository"
+        private const val TYPING_STATUS_PATH = "typing_status"
+        private const val DEFAULT_PAGE_SIZE = 50
+        private const val LOAD_MORE_PAGE_SIZE = 30
     }
 
     /**
@@ -446,6 +456,226 @@ class ChatRepository @Inject constructor(
         Result.success(unreadCount)
     } catch (e: Exception) {
         Log.e(TAG, "getUnreadCount: Failed for chatRoomId=$chatRoomId", e)
+        Result.failure(e)
+    }
+
+    // ==================== Pagination Functions ====================
+
+    /**
+     * Get latest messages (initial load)
+     * @param chatRoomId Chat room ID
+     * @param limit Number of messages to load (default 50)
+     * @return Result containing list of messages sorted by timestamp ascending
+     */
+    suspend fun getLatestMessages(
+        chatRoomId: String,
+        limit: Int = DEFAULT_PAGE_SIZE
+    ): Result<List<Message>> = try {
+        Log.d(TAG, "getLatestMessages: chatRoomId=$chatRoomId, limit=$limit")
+
+        val snapshot = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+
+        val messages = snapshot.toObjects(Message::class.java)
+            .sortedBy { it.timestamp }
+
+        Log.d(TAG, "getLatestMessages: Loaded ${messages.size} messages")
+        Result.success(messages)
+    } catch (e: Exception) {
+        Log.e(TAG, "getLatestMessages: Failed", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Get messages before a specific timestamp (pagination load)
+     * @param chatRoomId Chat room ID
+     * @param beforeTimestamp Load messages before this timestamp
+     * @param limit Number of messages to load (default 30)
+     * @return Result containing list of messages sorted by timestamp ascending
+     */
+    suspend fun getMessagesBefore(
+        chatRoomId: String,
+        beforeTimestamp: Long,
+        limit: Int = LOAD_MORE_PAGE_SIZE
+    ): Result<List<Message>> = try {
+        Log.d(TAG, "getMessagesBefore: chatRoomId=$chatRoomId, beforeTimestamp=$beforeTimestamp, limit=$limit")
+
+        val beforeDate = Date(beforeTimestamp)
+        val snapshot = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .whereLessThan("timestamp", beforeDate)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(limit.toLong())
+            .get()
+            .await()
+
+        val messages = snapshot.toObjects(Message::class.java)
+            .sortedBy { it.timestamp }
+
+        Log.d(TAG, "getMessagesBefore: Loaded ${messages.size} older messages")
+        Result.success(messages)
+    } catch (e: Exception) {
+        Log.e(TAG, "getMessagesBefore: Failed", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Observe new messages in real-time (after initial load)
+     * @param chatRoomId Chat room ID
+     * @param afterTimestamp Only receive messages after this timestamp
+     * @return Flow emitting new messages one by one
+     */
+    fun observeNewMessages(
+        chatRoomId: String,
+        afterTimestamp: Long
+    ): Flow<Result<Message>> = callbackFlow {
+        Log.d(TAG, "observeNewMessages: Starting listener for chatRoomId=$chatRoomId, afterTimestamp=$afterTimestamp")
+
+        val afterDate = Date(afterTimestamp)
+        val listener = firestore.collection(Message.COLLECTION_NAME)
+            .whereEqualTo("chatRoomId", chatRoomId)
+            .whereGreaterThan("timestamp", afterDate)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "observeNewMessages: Error", error)
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    for (change in snapshot.documentChanges) {
+                        if (change.type == com.google.firebase.firestore.DocumentChange.Type.ADDED) {
+                            val message = change.document.toObject(Message::class.java)
+                            Log.d(TAG, "observeNewMessages: New message received - id=${message.id}")
+                            trySend(Result.success(message))
+                        }
+                    }
+                }
+            }
+
+        awaitClose {
+            Log.d(TAG, "observeNewMessages: Removing listener")
+            listener.remove()
+        }
+    }
+
+    // ==================== Typing Status Functions ====================
+
+    /**
+     * Update typing status in Firebase Realtime Database
+     * @param chatRoomId Chat room ID
+     * @param userId User ID
+     * @param userName User display name
+     * @param isTyping Whether the user is typing
+     */
+    suspend fun updateTypingStatus(
+        chatRoomId: String,
+        userId: String,
+        userName: String,
+        isTyping: Boolean
+    ): Result<Unit> = try {
+        Log.d(TAG, "updateTypingStatus: chatRoomId=$chatRoomId, userId=$userId, isTyping=$isTyping")
+
+        val typingRef = realtimeDatabase.reference
+            .child(TYPING_STATUS_PATH)
+            .child(chatRoomId)
+            .child(userId)
+
+        if (isTyping) {
+            val typingStatus = mapOf(
+                "userId" to userId,
+                "userName" to userName,
+                "isTyping" to true,
+                "timestamp" to System.currentTimeMillis()
+            )
+            typingRef.setValue(typingStatus).await()
+        } else {
+            typingRef.removeValue().await()
+        }
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.e(TAG, "updateTypingStatus: Failed", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Observe typing status in a chat room
+     * @param chatRoomId Chat room ID
+     * @param excludeUserId Exclude this user from typing list (usually current user)
+     * @return Flow emitting list of users currently typing
+     */
+    fun observeTypingStatus(
+        chatRoomId: String,
+        excludeUserId: String
+    ): Flow<List<TypingStatus>> = callbackFlow {
+        Log.d(TAG, "observeTypingStatus: Starting listener for chatRoomId=$chatRoomId")
+
+        val typingRef = realtimeDatabase.reference
+            .child(TYPING_STATUS_PATH)
+            .child(chatRoomId)
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val typingUsers = mutableListOf<TypingStatus>()
+                val currentTime = System.currentTimeMillis()
+                val staleThreshold = 5000L // 5 seconds
+
+                for (child in snapshot.children) {
+                    val userId = child.child("userId").getValue(String::class.java) ?: continue
+                    val userName = child.child("userName").getValue(String::class.java) ?: continue
+                    val isTyping = child.child("isTyping").getValue(Boolean::class.java) ?: false
+                    val timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0L
+
+                    // Exclude current user and check if not stale
+                    if (userId != excludeUserId && isTyping && (currentTime - timestamp) < staleThreshold) {
+                        typingUsers.add(
+                            TypingStatus(
+                                userId = userId,
+                                userName = userName,
+                                isTyping = true,
+                                timestamp = timestamp
+                            )
+                        )
+                    }
+                }
+
+                Log.d(TAG, "observeTypingStatus: ${typingUsers.size} users typing")
+                trySend(typingUsers)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "observeTypingStatus: Cancelled", error.toException())
+                trySend(emptyList())
+            }
+        }
+
+        typingRef.addValueEventListener(listener)
+
+        awaitClose {
+            Log.d(TAG, "observeTypingStatus: Removing listener")
+            typingRef.removeEventListener(listener)
+        }
+    }
+
+    /**
+     * Clear typing status when leaving chat
+     */
+    suspend fun clearTypingStatus(chatRoomId: String, userId: String): Result<Unit> = try {
+        realtimeDatabase.reference
+            .child(TYPING_STATUS_PATH)
+            .child(chatRoomId)
+            .child(userId)
+            .removeValue()
+            .await()
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.w(TAG, "clearTypingStatus: Failed", e)
         Result.failure(e)
     }
 }

@@ -13,6 +13,7 @@
     <string name="type_message">Type a message</string>
     <string name="send">Send</string>
     <string name="no_messages">No messages yet</string>
+    <string name="typing_indicator">%1$s님이 입력 중…</string>
     <string name="edit_chat_room_name">채팅방 이름 변경</string>
     <string name="invite_users">사용자 초대</string>
     <string name="select_users_to_invite">초대할 사용자 선택</string>

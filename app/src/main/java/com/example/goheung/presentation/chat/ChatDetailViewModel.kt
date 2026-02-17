@@ -10,10 +10,13 @@ import com.example.goheung.data.model.ChatRoom
 import com.example.goheung.data.model.ChatRoomType
 import com.example.goheung.data.model.Message
 import com.example.goheung.data.model.MessageType
+import com.example.goheung.data.model.TypingStatus
 import com.example.goheung.data.model.User
 import com.example.goheung.data.repository.ChatRepository
 import com.example.goheung.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -51,6 +54,14 @@ class ChatDetailViewModel @Inject constructor(
 
     private val _participantsDisplay = MutableLiveData<String>()
     val participantsDisplay: LiveData<String> = _participantsDisplay
+
+    // Typing indicator state
+    private val _typingUsers = MutableLiveData<List<TypingStatus>>(emptyList())
+    val typingUsers: LiveData<List<TypingStatus>> = _typingUsers
+
+    private var typingJob: Job? = null
+    private var currentUserId: String = ""
+    private var currentUserName: String = ""
 
     init {
         loadChatRoom()
@@ -311,7 +322,99 @@ class ChatDetailViewModel @Inject constructor(
         _error.value = null
     }
 
+    // ==================== Typing Indicator Functions ====================
+
+    /**
+     * Initialize typing status observation
+     * Should be called when fragment resumes with current user info
+     */
+    fun initTypingStatus(userId: String, userName: String) {
+        currentUserId = userId
+        currentUserName = userName
+        observeTypingStatus()
+    }
+
+    /**
+     * Observe typing status from other users
+     */
+    private fun observeTypingStatus() {
+        if (chatRoomId.isEmpty() || currentUserId.isEmpty()) return
+
+        viewModelScope.launch {
+            chatRepository.observeTypingStatus(chatRoomId, currentUserId)
+                .catch { e ->
+                    Log.e(TAG, "observeTypingStatus: Error", e)
+                }
+                .collect { typingList ->
+                    Log.d(TAG, "observeTypingStatus: ${typingList.size} users typing")
+                    _typingUsers.value = typingList
+                }
+        }
+    }
+
+    /**
+     * Update typing status
+     * Called when user starts/stops typing
+     * Auto-clears after 2 seconds of no input
+     */
+    fun notifyTypingStatus(isTyping: Boolean) {
+        if (chatRoomId.isEmpty() || currentUserId.isEmpty()) return
+
+        // Cancel previous typing timeout
+        typingJob?.cancel()
+
+        viewModelScope.launch {
+            if (isTyping) {
+                // Update typing status
+                chatRepository.updateTypingStatus(
+                    chatRoomId = chatRoomId,
+                    userId = currentUserId,
+                    userName = currentUserName,
+                    isTyping = true
+                )
+
+                // Auto-clear after 2 seconds
+                typingJob = viewModelScope.launch {
+                    delay(TYPING_TIMEOUT_MS)
+                    clearTypingStatus()
+                }
+            } else {
+                clearTypingStatus()
+            }
+        }
+    }
+
+    /**
+     * Clear typing status
+     */
+    private suspend fun clearTypingStatus() {
+        chatRepository.updateTypingStatus(
+            chatRoomId = chatRoomId,
+            userId = currentUserId,
+            userName = currentUserName,
+            isTyping = false
+        )
+    }
+
+    /**
+     * Clean up typing status when leaving chat
+     */
+    fun cleanupTypingStatus() {
+        if (chatRoomId.isEmpty() || currentUserId.isEmpty()) return
+
+        typingJob?.cancel()
+        viewModelScope.launch {
+            chatRepository.clearTypingStatus(chatRoomId, currentUserId)
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        cleanupTypingStatus()
+    }
+
     companion object {
         private const val TAG = "ChatDetailViewModel"
+        private const val TYPING_TIMEOUT_MS = 2000L
     }
 }

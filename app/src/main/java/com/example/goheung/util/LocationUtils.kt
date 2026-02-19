@@ -31,12 +31,14 @@ object LocationUtils {
     fun formatArrivalTime(distanceInMeters: Double, speedKmH: Double = 40.0): String {
         val speedMps = speedKmH * 1000 / 3600  // km/h -> m/s
         val timeInSeconds = distanceInMeters / speedMps
-        val timeInMinutes = ceil(timeInSeconds / 60).toInt()
 
         return when {
-            timeInMinutes < 1 -> "곧 도착"
-            timeInMinutes == 1 -> "약 1분 후 도착"
-            else -> "약 ${timeInMinutes}분 후 도착"
+            timeInSeconds < 30 -> "곧 도착"
+            timeInSeconds < 90 -> "약 1분 후 도착"
+            else -> {
+                val timeInMinutes = (timeInSeconds / 60).roundToInt()
+                "약 ${timeInMinutes}분 후 도착"
+            }
         }
     }
 

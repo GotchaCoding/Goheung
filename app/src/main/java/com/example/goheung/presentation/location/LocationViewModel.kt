@@ -31,6 +31,7 @@ class LocationViewModel @Inject constructor(
         private const val TAG = "LocationViewModel"
         private const val LOCATION_UPDATE_INTERVAL = 1000L
         private const val BUS_TRACKING_INTERVAL = 1000L
+        private const val MATCHING_DISTANCE_THRESHOLD = 15000.0  // 15km (미터)
     }
 
     private val _allLocations = MutableLiveData<List<UserLocation>>()
@@ -60,6 +61,9 @@ class LocationViewModel @Inject constructor(
 
     private val _nearestBus = MutableLiveData<UserLocation?>()
     val nearestBus: LiveData<UserLocation?> = _nearestBus
+
+    private val _distanceToBus = MutableLiveData<Double?>()
+    val distanceToBus: LiveData<Double?> = _distanceToBus
 
     private var previousBearing: Float? = null
     private var trackingJob: Job? = null
@@ -106,14 +110,19 @@ class LocationViewModel @Inject constructor(
         when (role) {
             UserRole.PASSENGER -> {
                 val driver = findNearestByRole(locations, myLocation, UserRole.DRIVER)
-                _arrivalTime.value = driver?.let {
+                if (driver != null) {
                     val distance = LocationUtils.calculateDistance(
-                        it.lat, it.lng, myLocation.lat, myLocation.lng
+                        driver.lat, driver.lng, myLocation.lat, myLocation.lng
                     )
-                    LocationUtils.formatArrivalTime(distance)
+                    _arrivalTime.value = LocationUtils.formatArrivalTime(distance)
+                    _distanceToBus.value = distance
+                } else {
+                    _arrivalTime.value = null
+                    _distanceToBus.value = null
                 }
             }
             UserRole.DRIVER -> {
+                _distanceToBus.value = null  // 운전자에게는 거리 표시 안 함
                 val passenger = findNearestByRole(locations, myLocation, UserRole.PASSENGER)
                 _arrivalTime.value = passenger?.let {
                     val distance = LocationUtils.calculateDistance(
@@ -122,12 +131,15 @@ class LocationViewModel @Inject constructor(
                     LocationUtils.formatArrivalTime(distance)
                 }
             }
-            else -> _arrivalTime.value = null
+            else -> {
+                _arrivalTime.value = null
+                _distanceToBus.value = null
+            }
         }
     }
 
     /**
-     * 특정 역할의 가장 가까운 사용자 찾기
+     * 특정 역할의 가장 가까운 사용자 찾기 (15km 이내만)
      */
     private fun findNearestByRole(
         locations: List<UserLocation>,
@@ -136,12 +148,15 @@ class LocationViewModel @Inject constructor(
     ): UserLocation? {
         return locations
             .filter { UserRole.fromString(it.role) == targetRole && it.uid != myLocation.uid }
-            .minByOrNull { location ->
-                LocationUtils.calculateDistance(
+            .map { location ->
+                location to LocationUtils.calculateDistance(
                     myLocation.lat, myLocation.lng,
                     location.lat, location.lng
                 )
             }
+            .filter { (_, distance) -> distance <= MATCHING_DISTANCE_THRESHOLD }
+            .minByOrNull { (_, distance) -> distance }
+            ?.first
     }
 
     /**
@@ -168,7 +183,7 @@ class LocationViewModel @Inject constructor(
     }
 
     /**
-     * 가장 가까운 버스 업데이트
+     * 가장 가까운 버스 업데이트 (15km 이내만)
      */
     private fun updateNearestBus() {
         val myLocation = _myLocation.value ?: return
@@ -177,12 +192,15 @@ class LocationViewModel @Inject constructor(
 
         val nearest = allLocations
             .filter { UserRole.fromString(it.role) == UserRole.DRIVER && it.uid != currentUid }
-            .minByOrNull { location ->
-                LocationUtils.calculateDistance(
+            .map { location ->
+                location to LocationUtils.calculateDistance(
                     myLocation.lat, myLocation.lng,
                     location.lat, location.lng
                 )
             }
+            .filter { (_, distance) -> distance <= MATCHING_DISTANCE_THRESHOLD }
+            .minByOrNull { (_, distance) -> distance }
+            ?.first
 
         _nearestBus.value = nearest
         if (nearest != null) {
@@ -191,13 +209,20 @@ class LocationViewModel @Inject constructor(
     }
 
     /**
-     * 추적 가능한 버스 존재 여부
+     * 추적 가능한 버스 존재 여부 (15km 이내만)
      */
     fun hasAvailableBus(): Boolean {
+        val myLocation = _myLocation.value ?: return false
         val allLocations = _allLocations.value ?: return false
         val currentUid = auth.currentUser?.uid
-        return allLocations.any {
-            UserRole.fromString(it.role) == UserRole.DRIVER && it.uid != currentUid
+
+        return allLocations.any { location ->
+            UserRole.fromString(location.role) == UserRole.DRIVER &&
+            location.uid != currentUid &&
+            LocationUtils.calculateDistance(
+                myLocation.lat, myLocation.lng,
+                location.lat, location.lng
+            ) <= MATCHING_DISTANCE_THRESHOLD
         }
     }
 

@@ -23,6 +23,7 @@ import com.example.goheung.data.model.UserRole
 import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.databinding.FragmentLocationBinding
+import com.example.goheung.util.LocationUtils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.kakao.vectormap.KakaoMap
@@ -45,6 +46,7 @@ class LocationFragment : Fragment() {
         private const val INITIAL_ZOOM = 12
         private const val GOHEUNG_LAT = 34.8118
         private const val GOHEUNG_LNG = 127.6869
+        private const val MAP_DISPLAY_DISTANCE_THRESHOLD = 15000.0  // 15km (미터)
     }
 
     private var _binding: FragmentLocationBinding? = null
@@ -112,7 +114,19 @@ class LocationFragment : Fragment() {
 
     private fun setupObservers() {
         viewModel.allLocations.observe(viewLifecycleOwner) { locations ->
-            updateMarkers(locations)
+            val myLocation = viewModel.myLocation.value
+            val filteredLocations = if (myLocation != null) {
+                locations.filter { location ->
+                    location.uid == myLocation.uid ||  // 내 위치는 항상 표시
+                    LocationUtils.calculateDistance(
+                        myLocation.lat, myLocation.lng,
+                        location.lat, location.lng
+                    ) <= MAP_DISPLAY_DISTANCE_THRESHOLD
+                }
+            } else {
+                locations
+            }
+            updateMarkers(filteredLocations)
         }
 
         viewModel.arrivalTime.observe(viewLifecycleOwner) { time ->
@@ -121,6 +135,17 @@ class LocationFragment : Fragment() {
                 binding.cardArrivalTime.isVisible = true
             } else {
                 binding.cardArrivalTime.isVisible = false
+            }
+        }
+
+        // 버스까지 거리 (승객만 표시)
+        viewModel.distanceToBus.observe(viewLifecycleOwner) { distance ->
+            if (distance != null) {
+                val formattedDistance = LocationUtils.formatDistance(distance)
+                binding.textViewDistance.text = getString(R.string.distance_to_bus, formattedDistance)
+                binding.textViewDistance.isVisible = true
+            } else {
+                binding.textViewDistance.isVisible = false
             }
         }
 

@@ -35,6 +35,16 @@
                 android:textColor="@color/textPrimary"
                 android:textStyle="bold" />
 
+            <!-- 버스까지 거리 (승객만) -->
+            <TextView
+                android:id="@+id/textViewDistance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="14sp"
+                android:textColor="@color/textSecondary"
+                android:visibility="gone" />
+
             <!-- 새로 추가: 속도 표시 -->
             <LinearLayout
                 android:id="@+id/layoutSpeed"

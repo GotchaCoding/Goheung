@@ -115,6 +115,7 @@
     <string name="bus_tracking_stopped">버스 추적 종료</string>
     <string name="no_bus_available">추적 가능한 버스가 없습니다</string>
     <string name="nearest_passenger_arrival">가장 가까운 승객: %1$s</string>
+    <string name="distance_to_bus">버스까지 %1$s</string>
 
     <!-- Role -->
     <string name="role_label">역할</string>

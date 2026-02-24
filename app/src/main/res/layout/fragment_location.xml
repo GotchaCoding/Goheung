@@ -45,7 +45,7 @@
                 android:textColor="@color/textSecondary"
                 android:visibility="gone" />
 
-            <!-- 새로 추가: 속도 표시 -->
+            <!-- 속도 표시 -->
             <LinearLayout
                 android:id="@+id/layoutSpeed"
                 android:layout_width="wrap_content"
@@ -70,6 +70,18 @@
                     android:textColor="@color/textSecondary"
                     android:layout_marginStart="4dp" />
             </LinearLayout>
+
+            <!-- 가장 가까운 정류장 표시 -->
+            <TextView
+                android:id="@+id/textViewNearestBusStop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="14sp"
+                android:textColor="@color/colorPrimary"
+                android:drawableStart="@drawable/ic_bus_stop_marker"
+                android:drawablePadding="4dp"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

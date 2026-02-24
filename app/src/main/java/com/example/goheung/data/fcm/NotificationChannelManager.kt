@@ -16,25 +16,36 @@ class NotificationChannelManager @Inject constructor(
 ) {
     companion object {
         const val CHANNEL_ID_CHAT = "goheung_chat_messages"
+        const val CHANNEL_ID_BUS_ARRIVAL = "goheung_bus_arrival"
     }
 
     fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelName = context.getString(R.string.notification_channel_chat_name)
-            val channelDescription = context.getString(R.string.notification_channel_chat_description)
+            val notificationManager = context.getSystemService(NotificationManager::class.java)
 
-            val channel = NotificationChannel(
+            // 채팅 메시지 채널
+            val chatChannel = NotificationChannel(
                 CHANNEL_ID_CHAT,
-                channelName,
+                context.getString(R.string.notification_channel_chat_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = channelDescription
+                description = context.getString(R.string.notification_channel_chat_description)
                 enableVibration(true)
                 enableLights(true)
             }
 
-            val notificationManager = context.getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+            // 버스 도착 알림 채널
+            val busArrivalChannel = NotificationChannel(
+                CHANNEL_ID_BUS_ARRIVAL,
+                context.getString(R.string.notification_channel_bus_arrival_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.notification_channel_bus_arrival_description)
+                enableVibration(true)
+                enableLights(true)
+            }
+
+            notificationManager.createNotificationChannels(listOf(chatChannel, busArrivalChannel))
         }
     }
 

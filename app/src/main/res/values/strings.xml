@@ -101,6 +101,11 @@
     <!-- Notifications -->
     <string name="notification_channel_chat_name">채팅 메시지</string>
     <string name="notification_channel_chat_description">새로운 채팅 메시지 알림</string>
+    <string name="notification_channel_bus_arrival_name">버스 도착 알림</string>
+    <string name="notification_channel_bus_arrival_description">버스가 가까이 왔을 때 알림</string>
+    <string name="notification_bus_arrival_title">버스가 가까이 왔습니다</string>
+    <string name="notification_bus_arrival_body">%1$s님이 %2$s 이내에 도착합니다</string>
+    <string name="notification_bus_arrival_body_with_stop">%1$s님이 %2$s 이내에 도착합니다 (%3$s 근처)</string>
 
     <!-- Location -->
     <string name="location_permission_required">위치 권한 필요</string>
@@ -116,6 +121,7 @@
     <string name="no_bus_available">추적 가능한 버스가 없습니다</string>
     <string name="nearest_passenger_arrival">가장 가까운 승객: %1$s</string>
     <string name="distance_to_bus">버스까지 %1$s</string>
+    <string name="nearest_bus_stop">가장 가까운 정류장: %1$s (%2$s)</string>
 
     <!-- Role -->
     <string name="role_label">역할</string>

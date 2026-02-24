@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="40dp"
+    android:viewportWidth="32"
+    android:viewportHeight="40">
+
+    <!-- Pin shape -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M16,0C7.163,0 0,7.163 0,16c0,12 16,24 16,24s16,-12 16,-24C32,7.163 24.837,0 16,0z"/>
+
+    <!-- White circle background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,8a8,8 0,1 0,0 16a8,8 0,1 0,0 -16z"/>
+
+    <!-- Bus icon -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M11,10h10c0.55,0 1,0.45 1,1v8c0,0.55 -0.45,1 -1,1h-10c-0.55,0 -1,-0.45 -1,-1v-8c0,-0.55 0.45,-1 1,-1zM12,18h2v1h-2zM18,18h2v1h-2zM11,15h10v2h-10zM11,11h10v3h-10z"/>
+</vector>

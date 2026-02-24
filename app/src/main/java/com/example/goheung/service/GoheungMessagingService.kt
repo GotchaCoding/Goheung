@@ -34,6 +34,9 @@ class GoheungMessagingService : FirebaseMessagingService() {
         private const val TAG = "GoheungMessagingService"
         const val EXTRA_CHAT_ROOM_ID = "chatRoomId"
         const val EXTRA_CHAT_ROOM_NAME = "chatRoomName"
+        const val EXTRA_NAVIGATE_TO = "navigateTo"
+        private const val MESSAGE_TYPE_CHAT = "CHAT"
+        private const val MESSAGE_TYPE_BUS_ARRIVAL = "BUS_ARRIVAL"
     }
 
     override fun onNewToken(token: String) {
@@ -52,6 +55,15 @@ class GoheungMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Log.d(TAG, "Message received from: ${remoteMessage.from}")
 
+        val messageType = remoteMessage.data["type"] ?: MESSAGE_TYPE_CHAT
+
+        when (messageType) {
+            MESSAGE_TYPE_BUS_ARRIVAL -> handleBusArrivalNotification(remoteMessage)
+            else -> handleChatNotification(remoteMessage)
+        }
+    }
+
+    private fun handleChatNotification(remoteMessage: RemoteMessage) {
         val currentUserId = firebaseAuth.currentUser?.uid
         val senderId = remoteMessage.data["senderId"]
 
@@ -69,10 +81,25 @@ class GoheungMessagingService : FirebaseMessagingService() {
         val title = chatRoomName ?: senderName
         val body = if (chatRoomName != null) "$senderName: $messageText" else messageText
 
-        showNotification(title, body, chatRoomId, chatRoomName)
+        showChatNotification(title, body, chatRoomId, chatRoomName)
     }
 
-    private fun showNotification(
+    private fun handleBusArrivalNotification(remoteMessage: RemoteMessage) {
+        val driverName = remoteMessage.data["driverName"] ?: "버스"
+        val distance = remoteMessage.data["distance"] ?: "500m"
+        val busStopName = remoteMessage.data["busStopName"]
+
+        val title = getString(R.string.notification_bus_arrival_title)
+        val body = if (busStopName != null) {
+            getString(R.string.notification_bus_arrival_body_with_stop, driverName, distance, busStopName)
+        } else {
+            getString(R.string.notification_bus_arrival_body, driverName, distance)
+        }
+
+        showBusArrivalNotification(title, body)
+    }
+
+    private fun showChatNotification(
         title: String,
         body: String,
         chatRoomId: String?,
@@ -101,6 +128,37 @@ class GoheungMessagingService : FirebaseMessagingService() {
             .build()
 
         val notificationId = chatRoomId?.hashCode() ?: System.currentTimeMillis().toInt()
+
+        try {
+            NotificationManagerCompat.from(this).notify(notificationId, notification)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Notification permission not granted", e)
+        }
+    }
+
+    private fun showBusArrivalNotification(title: String, body: String) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(EXTRA_NAVIGATE_TO, "location")
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            "bus_arrival".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, NotificationChannelManager.CHANNEL_ID_BUS_ARRIVAL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val notificationId = "bus_arrival".hashCode()
 
         try {
             NotificationManagerCompat.from(this).notify(notificationId, notification)

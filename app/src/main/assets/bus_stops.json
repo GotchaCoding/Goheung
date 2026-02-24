@@ -1,0 +1,98 @@
+[
+  {
+    "id": "stop_001",
+    "name": "고흥터미널",
+    "lat": 34.6088,
+    "lng": 127.2839,
+    "order": 1,
+    "isActive": true
+  },
+  {
+    "id": "stop_002",
+    "name": "고흥읍사무소",
+    "lat": 34.6095,
+    "lng": 127.2785,
+    "order": 2,
+    "isActive": true
+  },
+  {
+    "id": "stop_003",
+    "name": "고흥시장",
+    "lat": 34.6075,
+    "lng": 127.2755,
+    "order": 3,
+    "isActive": true
+  },
+  {
+    "id": "stop_004",
+    "name": "고흥군청",
+    "lat": 34.6108,
+    "lng": 127.2738,
+    "order": 4,
+    "isActive": true
+  },
+  {
+    "id": "stop_005",
+    "name": "도화면사무소",
+    "lat": 34.5789,
+    "lng": 127.2612,
+    "order": 5,
+    "isActive": true
+  },
+  {
+    "id": "stop_006",
+    "name": "봉래면사무소",
+    "lat": 34.5512,
+    "lng": 127.2498,
+    "order": 6,
+    "isActive": true
+  },
+  {
+    "id": "stop_007",
+    "name": "나로도항",
+    "lat": 34.4756,
+    "lng": 127.4512,
+    "order": 7,
+    "isActive": true
+  },
+  {
+    "id": "stop_008",
+    "name": "발포항",
+    "lat": 34.4823,
+    "lng": 127.3245,
+    "order": 8,
+    "isActive": true
+  },
+  {
+    "id": "stop_009",
+    "name": "녹동항",
+    "lat": 34.4312,
+    "lng": 127.3521,
+    "order": 9,
+    "isActive": true
+  },
+  {
+    "id": "stop_010",
+    "name": "우주발사전망대",
+    "lat": 34.4298,
+    "lng": 127.5312,
+    "order": 10,
+    "isActive": true
+  },
+  {
+    "id": "stop_011",
+    "name": "동강면사무소",
+    "lat": 34.6312,
+    "lng": 127.3245,
+    "order": 11,
+    "isActive": true
+  },
+  {
+    "id": "stop_012",
+    "name": "점암면사무소",
+    "lat": 34.6578,
+    "lng": 127.3089,
+    "order": 12,
+    "isActive": true
+  }
+]

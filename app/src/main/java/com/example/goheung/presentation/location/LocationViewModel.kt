@@ -5,10 +5,17 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.goheung.data.model.BoardingEvent
+import com.example.goheung.data.model.BusStop
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.data.model.UserRole
+import com.example.goheung.data.repository.BoardingEventRepository
+import com.example.goheung.data.repository.BusStopRepository
 import com.example.goheung.data.repository.LocationRepository
 import com.example.goheung.data.repository.UserRepository
+import com.example.goheung.domain.boarding.AutoBusStopManager
+import com.example.goheung.domain.boarding.BoardingDetector
+import com.example.goheung.domain.boarding.BoardingState
 import com.example.goheung.service.LocationService
 import com.example.goheung.util.LocationUtils
 import com.google.firebase.auth.FirebaseAuth
@@ -23,6 +30,10 @@ import javax.inject.Inject
 class LocationViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val userRepository: UserRepository,
+    private val busStopRepository: BusStopRepository,
+    private val boardingEventRepository: BoardingEventRepository,
+    private val boardingDetector: BoardingDetector,
+    private val autoBusStopManager: AutoBusStopManager,
     private val locationService: LocationService,
     private val auth: FirebaseAuth
 ) : ViewModel() {
@@ -65,12 +76,31 @@ class LocationViewModel @Inject constructor(
     private val _distanceToBus = MutableLiveData<Double?>()
     val distanceToBus: LiveData<Double?> = _distanceToBus
 
+    // 버스 정류장 관련
+    private val _busStops = MutableLiveData<List<BusStop>>()
+    val busStops: LiveData<List<BusStop>> = _busStops
+
+    private val _nearestBusStop = MutableLiveData<Pair<BusStop, Double>?>()
+    val nearestBusStop: LiveData<Pair<BusStop, Double>?> = _nearestBusStop
+
+    // 탑승 감지 관련
+    private val _boardingState = MutableLiveData<BoardingState>(BoardingState.IDLE)
+    val boardingState: LiveData<BoardingState> = _boardingState
+
+    private val _lastBoardingEvent = MutableLiveData<BoardingEvent?>()
+    val lastBoardingEvent: LiveData<BoardingEvent?> = _lastBoardingEvent
+
+    private val _newAutoBusStop = MutableLiveData<BusStop?>()
+    val newAutoBusStop: LiveData<BusStop?> = _newAutoBusStop
+
     private var previousBearing: Float? = null
     private var trackingJob: Job? = null
 
     init {
         observeLocations()
+        observeBusStops()
         setupDisconnectHandler()
+        setupBoardingDetector()
     }
 
     /**
@@ -87,7 +117,53 @@ class LocationViewModel @Inject constructor(
                     _allLocations.value = locations
                     updateMyLocation(locations)
                     calculateArrivalTime(locations)
+                    updateNearestBusStop()
+                    processBoardingDetection(locations)
                 }
+        }
+    }
+
+    /**
+     * 버스 정류장 구독
+     */
+    private fun observeBusStops() {
+        viewModelScope.launch {
+            busStopRepository.observeActiveBusStops()
+                .catch { e ->
+                    Log.e(TAG, "Failed to observe bus stops", e)
+                }
+                .collect { stops ->
+                    _busStops.value = stops
+                    Log.d(TAG, "Loaded ${stops.size} bus stops")
+                    updateNearestBusStop()
+                }
+        }
+    }
+
+    /**
+     * 가장 가까운 정류장 업데이트
+     */
+    private fun updateNearestBusStop() {
+        val myLocation = _myLocation.value ?: return
+        val stops = _busStops.value ?: return
+
+        if (stops.isEmpty()) {
+            _nearestBusStop.value = null
+            return
+        }
+
+        val nearest = stops
+            .map { stop ->
+                stop to LocationUtils.calculateDistance(
+                    myLocation.lat, myLocation.lng,
+                    stop.lat, stop.lng
+                )
+            }
+            .minByOrNull { it.second }
+
+        _nearestBusStop.value = nearest
+        nearest?.let {
+            Log.d(TAG, "Nearest bus stop: ${it.first.name} (${it.second}m)")
         }
     }
 
@@ -313,6 +389,76 @@ class LocationViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
+    // ========== 탑승 감지 관련 ==========
+
+    /**
+     * BoardingDetector 초기화
+     */
+    private fun setupBoardingDetector() {
+        boardingDetector.onStateChanged = { state ->
+            _boardingState.postValue(state)
+            Log.d(TAG, "Boarding state changed: $state")
+        }
+
+        autoBusStopManager.onAutoBusStopCreated = { busStop ->
+            _newAutoBusStop.postValue(busStop)
+            Log.d(TAG, "New auto bus stop created: ${busStop.name}")
+        }
+    }
+
+    /**
+     * 탑승 감지 처리
+     */
+    private fun processBoardingDetection(locations: List<UserLocation>) {
+        val myLocation = _myLocation.value ?: return
+
+        val boardingEvent = boardingDetector.processLocationUpdate(myLocation, locations)
+
+        boardingEvent?.let { event ->
+            handleBoardingEvent(event)
+        }
+    }
+
+    /**
+     * 탑승 이벤트 처리
+     */
+    private fun handleBoardingEvent(event: BoardingEvent) {
+        viewModelScope.launch {
+            try {
+                // 1. 이벤트 저장
+                boardingEventRepository.saveBoardingEvent(event)
+                _lastBoardingEvent.value = event
+                Log.d(TAG, "Boarding event saved: ${event.id}")
+
+                // 2. 클러스터링 및 자동 정류장 처리
+                val newBusStop = autoBusStopManager.processBoardingEvent(event)
+                if (newBusStop != null) {
+                    _newAutoBusStop.value = newBusStop
+                    Log.d(TAG, "Auto bus stop promoted: ${newBusStop.name}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to handle boarding event", e)
+            }
+        }
+    }
+
+    /**
+     * 탑승 감지 리셋 (새 세션 시작)
+     */
+    fun resetBoardingDetection() {
+        boardingDetector.startNewSession()
+        _boardingState.value = BoardingState.IDLE
+        _lastBoardingEvent.value = null
+        _newAutoBusStop.value = null
+    }
+
+    /**
+     * 자동 정류장 알림 확인 처리
+     */
+    fun clearNewAutoBusStop() {
+        _newAutoBusStop.value = null
+    }
+
     /**
      * Bearing 스무딩 (떨림 방지)
      */
@@ -333,5 +479,6 @@ class LocationViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopLocationUpdates()
+        boardingDetector.reset()
     }
 }

@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import com.example.goheung.data.model.BusStop
 import com.example.goheung.data.model.UserRole
 import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
@@ -180,6 +181,23 @@ class LocationFragment : Fragment() {
                 moveCameraToLocation(it.lat, it.lng, zoom = DEFAULT_ZOOM)
             }
         }
+
+        // 버스 정류장 관찰
+        viewModel.busStops.observe(viewLifecycleOwner) { busStops ->
+            updateBusStopMarkers(busStops)
+        }
+
+        // 가장 가까운 정류장 관찰
+        viewModel.nearestBusStop.observe(viewLifecycleOwner) { nearest ->
+            if (nearest != null) {
+                val (busStop, distance) = nearest
+                val formattedDistance = LocationUtils.formatDistance(distance)
+                binding.textViewNearestBusStop.text = getString(R.string.nearest_bus_stop, busStop.name, formattedDistance)
+                binding.textViewNearestBusStop.isVisible = true
+            } else {
+                binding.textViewNearestBusStop.isVisible = false
+            }
+        }
     }
 
     private fun updateTrackingUI(isTracking: Boolean) {
@@ -250,6 +268,38 @@ class LocationFragment : Fragment() {
             role == UserRole.DRIVER && isMe -> R.drawable.ic_bus_marker
             role == UserRole.DRIVER -> R.drawable.ic_bus_marker_gray
             else -> R.drawable.ic_passenger_marker
+        }
+    }
+
+    /**
+     * 버스 정류장 마커 업데이트
+     * 자동 감지된 정류장(클러스터에서 승격된 정류장)은 표시하지 않음
+     */
+    private fun updateBusStopMarkers(busStops: List<BusStop>) {
+        val map = kakaoMap ?: return
+        val labelManager = map.labelManager ?: return
+
+        // 정류장 전용 레이어 생성 (없으면 기본 레이어 사용)
+        val layer = labelManager.layer ?: return
+
+        // 자동 감지된 정류장은 제외하고 기존 정류장만 표시
+        val manualBusStops = busStops.filter { !it.isAutoDetected }
+
+        manualBusStops.forEach { busStop ->
+            try {
+                val latLng = LatLng.from(busStop.lat, busStop.lng)
+                val bitmap = getBitmapFromVectorDrawable(R.drawable.ic_bus_stop_marker)
+                val labelStyles = LabelStyles.from(LabelStyle.from(bitmap))
+
+                val labelOptions = LabelOptions.from(latLng).apply {
+                    setStyles(labelStyles)
+                    setTexts(busStop.name)
+                }
+
+                layer.addLabel(labelOptions)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add bus stop marker for ${busStop.name}", e)
+            }
         }
     }
 

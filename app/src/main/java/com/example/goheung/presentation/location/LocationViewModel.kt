@@ -134,6 +134,7 @@ class LocationViewModel @Inject constructor(
                 }
                 .collect { stops ->
                     _busStops.value = stops
+                    boardingDetector.updateBusStops(stops)  // BoardingDetector에 정류장 정보 전달
                     Log.d(TAG, "Loaded ${stops.size} bus stops")
                     updateNearestBusStop()
                 }

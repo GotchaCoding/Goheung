@@ -45,16 +45,12 @@ class BusStopRepository @Inject constructor(
     }
 
     /**
-     * 앱 시작 시 JSON에서 정류장 데이터 로드 (DB가 비어있을 때만)
+     * 앱 시작 시 버스 정류장 초기화
+     * 기존 하드코딩 데이터 삭제 - 자동 감지 정류장만 사용
      */
     suspend fun initializeBusStops() {
-        val count = busStopDao.getCount()
-        if (count == 0) {
-            Log.d(TAG, "Initializing bus stops from JSON")
-            loadBusStopsFromJson()
-        } else {
-            Log.d(TAG, "Bus stops already initialized (count: $count)")
-        }
+        val deletedCount = busStopDao.deleteAllNonAutoDetected()
+        Log.d(TAG, "Deleted $deletedCount hardcoded bus stops. Using auto-detected stops only.")
     }
 
     /**

@@ -49,4 +49,7 @@ interface BusStopDao {
 
     @Query("DELETE FROM bus_stops WHERE isAutoDetected = 1")
     suspend fun deleteAllAutoDetected()
+
+    @Query("DELETE FROM bus_stops WHERE isAutoDetected = 0")
+    suspend fun deleteAllNonAutoDetected(): Int
 }

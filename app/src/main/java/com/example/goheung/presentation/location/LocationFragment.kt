@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.goheung.data.model.BusStop
 import com.example.goheung.data.model.UserRole
+import com.example.goheung.domain.boarding.BoardingState
 import com.example.goheung.R
 import com.example.goheung.data.model.UserLocation
 import com.example.goheung.databinding.FragmentLocationBinding
@@ -114,20 +115,21 @@ class LocationFragment : Fragment() {
     }
 
     private fun setupObservers() {
+        // 위치 데이터 관찰
         viewModel.allLocations.observe(viewLifecycleOwner) { locations ->
             val myLocation = viewModel.myLocation.value
-            val filteredLocations = if (myLocation != null) {
-                locations.filter { location ->
-                    location.uid == myLocation.uid ||  // 내 위치는 항상 표시
-                    LocationUtils.calculateDistance(
-                        myLocation.lat, myLocation.lng,
-                        location.lat, location.lng
-                    ) <= MAP_DISPLAY_DISTANCE_THRESHOLD
-                }
-            } else {
-                locations
-            }
+            val boardingState = viewModel.boardingState.value ?: BoardingState.IDLE
+            val filteredLocations = filterLocationsByState(locations, myLocation, boardingState)
             updateMarkers(filteredLocations)
+        }
+
+        // 승차 상태 관찰 - 상태 변경 시 마커 재표시
+        viewModel.boardingState.observe(viewLifecycleOwner) { state ->
+            viewModel.allLocations.value?.let { locations ->
+                val myLocation = viewModel.myLocation.value
+                val filteredLocations = filterLocationsByState(locations, myLocation, state)
+                updateMarkers(filteredLocations)
+            }
         }
 
         viewModel.arrivalTime.observe(viewLifecycleOwner) { time ->
@@ -299,6 +301,39 @@ class LocationFragment : Fragment() {
                 layer.addLabel(labelOptions)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to add bus stop marker for ${busStop.name}", e)
+            }
+        }
+    }
+
+    /**
+     * 승차 상태에 따라 표시할 위치 필터링
+     * - 승차 중: 내 위치 + 버스(DRIVER)만 표시
+     * - 일반 상태: 15km 이내 모든 마커 표시
+     */
+    private fun filterLocationsByState(
+        locations: List<UserLocation>,
+        myLocation: UserLocation?,
+        boardingState: BoardingState
+    ): List<UserLocation> {
+        if (myLocation == null) return locations
+
+        val isBoarded = boardingState == BoardingState.BOARDING ||
+                        boardingState == BoardingState.BOARDED
+
+        return if (isBoarded) {
+            // 승차 중: 내 위치 + 버스(DRIVER)만 표시
+            locations.filter { location ->
+                location.uid == myLocation.uid ||
+                UserRole.fromString(location.role) == UserRole.DRIVER
+            }
+        } else {
+            // 일반 상태: 15km 이내 모든 마커 표시
+            locations.filter { location ->
+                location.uid == myLocation.uid ||
+                LocationUtils.calculateDistance(
+                    myLocation.lat, myLocation.lng,
+                    location.lat, location.lng
+                ) <= MAP_DISPLAY_DISTANCE_THRESHOLD
             }
         }
     }

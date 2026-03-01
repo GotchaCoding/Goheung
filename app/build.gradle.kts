@@ -21,6 +21,15 @@ android {
     namespace = "com.example.goheung"
     compileSdk = 34
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("/Users/mh/Desktop/keyStore/무제.jks")
+            storePassword = localProperties.getProperty("storePassword") ?: System.getenv("storePassword")
+            keyAlias = localProperties.getProperty("keyAlias") ?: System.getenv("keyAlias")
+            keyPassword = localProperties.getProperty("keyPassword") ?: System.getenv("keyPassword")
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.goheung"
         minSdk = 24
@@ -39,6 +48,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

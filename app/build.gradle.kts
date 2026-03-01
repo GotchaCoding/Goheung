@@ -128,6 +128,9 @@ dependencies {
     // Kakao Map
     implementation(libs.kakao.map)
 
+    // AdMob
+    implementation(libs.play.services.ads)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

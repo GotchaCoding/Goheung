@@ -47,6 +47,9 @@ fragmentKtx = "1.6.2"
 # Location Services
 playServicesLocation = "21.1.0"
 
+# AdMob
+playServicesAds = "23.0.0"
+
 # Kakao Map
 kakaoMap = "2.9.5"
 
@@ -105,6 +108,9 @@ fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref
 
 # Location Services
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+
+# AdMob
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
 
 # Kakao Map
 kakao-map = { group = "com.kakao.maps.open", name = "android", version.ref = "kakaoMap" }

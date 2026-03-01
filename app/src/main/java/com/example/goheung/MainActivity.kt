@@ -13,6 +13,9 @@ import com.example.goheung.presentation.location.LocationFragment
 import com.example.goheung.presentation.more.MoreFragment
 import com.example.goheung.presentation.user.UserListFragment
 import com.example.goheung.service.GoheungMessagingService
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
@@ -25,10 +28,19 @@ class MainActivity : AppCompatActivity(), BottomNavController {
     lateinit var firebaseAuth: FirebaseAuth
 
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var adView: AdView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // AdMob 초기화
+        MobileAds.initialize(this) {}
+
+        // 광고 로드
+        adView = findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView.loadAd(adRequest)
 
         bottomNav = findViewById(R.id.bottom_navigation)
         setupBottomNavigation()
@@ -118,5 +130,20 @@ class MainActivity : AppCompatActivity(), BottomNavController {
 
     override fun hideBottomNav() {
         bottomNav.visibility = View.GONE
+    }
+
+    override fun onPause() {
+        adView.pause()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        adView.resume()
+    }
+
+    override fun onDestroy() {
+        adView.destroy()
+        super.onDestroy()
     }
 }

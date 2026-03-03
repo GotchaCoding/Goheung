@@ -5,17 +5,89 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers for debugging
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ============================================
+# Firebase Firestore / Realtime Database
+# ============================================
+# Keep all data model classes (Firebase uses reflection for deserialization)
+-keep class com.example.goheung.data.model.** { *; }
+-keepclassmembers class com.example.goheung.data.model.** {
+    public <init>();
+    public <init>(...);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Firebase
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+
+# ============================================
+# Room Database
+# ============================================
+-keep class com.example.goheung.data.local.** { *; }
+-keepclassmembers class com.example.goheung.data.local.** {
+    public <init>();
+}
+
+# ============================================
+# Hilt / Dagger
+# ============================================
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ComponentSupplier { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
+-keepclassmembers class * {
+    @dagger.hilt.* <fields>;
+    @javax.inject.* <fields>;
+    @dagger.hilt.* <methods>;
+    @javax.inject.* <methods>;
+}
+
+# ============================================
+# Retrofit / OkHttp / Gson
+# ============================================
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Gson
+-keep class com.google.gson.** { *; }
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+# Retrofit
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+
+# OkHttp
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+
+# ============================================
+# Kotlin
+# ============================================
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# Coroutines
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
+-dontwarn kotlinx.coroutines.**
+
+# ============================================
+# Kakao Map SDK
+# ============================================
+-keep class com.kakao.vectormap.** { *; }
+-dontwarn com.kakao.vectormap.**

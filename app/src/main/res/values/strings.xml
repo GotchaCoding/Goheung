@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Goheung</string>
+    <string name="app_name">FlowOn</string>
 
     <!-- Kakao API Key는 local.properties에서 관리 (BuildConfig.KAKAO_NATIVE_APP_KEY) -->
 

@@ -18,7 +18,7 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.example.goheung"
+    namespace = "com.goheung.app"
     compileSdk = 34
 
     signingConfigs {
@@ -31,7 +31,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.goheung"
+        applicationId = "com.goheung.app"
         minSdk = 24
         targetSdk = 34
         versionCode = 3

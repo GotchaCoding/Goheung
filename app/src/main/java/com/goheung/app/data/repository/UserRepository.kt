@@ -1,0 +1,124 @@
+package com.goheung.app.data.repository
+
+import android.util.Log
+import com.goheung.app.data.model.User
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class UserRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
+    companion object {
+        private const val TAG = "UserRepository"
+    }
+
+    private val usersCollection = firestore.collection(User.COLLECTION_NAME)
+
+    suspend fun createUser(user: User): Result<Unit> {
+        return try {
+            usersCollection.document(user.uid).set(user).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getUser(uid: String): Result<User> {
+        return try {
+            val snapshot = usersCollection.document(uid).get().await()
+            val user = snapshot.toObject(User::class.java)
+                ?: return Result.failure(Exception("사용자를 찾을 수 없습니다"))
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfile(uid: String, fields: Map<String, Any>): Result<Unit> {
+        return try {
+            usersCollection.document(uid).update(fields).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserRole(uid: String, role: String): Result<Unit> {
+        return try {
+            usersCollection.document(uid).update("role", role).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update user role", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchUsers(query: String): Result<List<User>> {
+        return try {
+            val snapshot = usersCollection
+                .orderBy("displayName")
+                .startAt(query)
+                .endAt(query + "\uf8ff")
+                .get()
+                .await()
+            val users = snapshot.toObjects(User::class.java)
+            Result.success(users)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getAllUsers(excludeUid: String? = null): Flow<Result<List<User>>> = callbackFlow {
+        val listenerRegistration = usersCollection
+            .orderBy("displayName")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val users = snapshot.toObjects(User::class.java)
+                        .filter { it.uid != excludeUid }
+                    trySend(Result.success(users))
+                }
+            }
+
+        awaitClose { listenerRegistration.remove() }
+    }
+
+    suspend fun getUsers(uids: List<String>): Result<List<User>> {
+        Log.d(TAG, "getUsers: Fetching ${uids.size} users - uids=$uids")
+        if (uids.isEmpty()) {
+            Log.d(TAG, "getUsers: Empty uids list, returning empty")
+            return Result.success(emptyList())
+        }
+
+        return try {
+            val users = mutableListOf<User>()
+
+            uids.chunked(10).forEach { chunk ->
+                Log.d(TAG, "getUsers: Querying chunk of ${chunk.size} users")
+                val snapshot = usersCollection
+                    .whereIn("uid", chunk)
+                    .get()
+                    .await()
+                val chunkUsers = snapshot.toObjects(User::class.java)
+                Log.d(TAG, "getUsers: Found ${chunkUsers.size} users in this chunk")
+                users.addAll(chunkUsers)
+            }
+
+            Log.d(TAG, "getUsers: Total users fetched: ${users.size}")
+            Result.success(users)
+        } catch (e: Exception) {
+            Log.e(TAG, "getUsers: Failed to fetch users", e)
+            Result.failure(e)
+        }
+    }
+}

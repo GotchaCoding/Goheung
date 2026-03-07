@@ -13,8 +13,8 @@
 # Firebase Firestore / Realtime Database
 # ============================================
 # Keep all data model classes (Firebase uses reflection for deserialization)
--keep class com.example.goheung.data.model.** { *; }
--keepclassmembers class com.example.goheung.data.model.** {
+-keep class com.goheung.app.data.model.** { *; }
+-keepclassmembers class com.goheung.app.data.model.** {
     public <init>();
     public <init>(...);
 }
@@ -26,8 +26,8 @@
 # ============================================
 # Room Database
 # ============================================
--keep class com.example.goheung.data.local.** { *; }
--keepclassmembers class com.example.goheung.data.local.** {
+-keep class com.goheung.app.data.local.** { *; }
+-keepclassmembers class com.goheung.app.data.local.** {
     public <init>();
 }
 

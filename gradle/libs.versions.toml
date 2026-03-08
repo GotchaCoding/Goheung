@@ -1,57 +1,58 @@
 [versions]
-agp = "8.4.0"
-kotlin = "1.9.22"
-coreKtx = "1.13.1"
+agp = "8.10.0"
+kotlin = "2.1.0"
+ksp = "2.1.0-1.0.29"
+coreKtx = "1.17.0"
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-appcompat = "1.7.0"
-material = "1.12.0"
-activity = "1.9.0"
-constraintlayout = "2.1.4"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+appcompat = "1.7.1"
+material = "1.13.0"
+activity = "1.12.3"
+constraintlayout = "2.2.1"
 
 # Firebase
-firebaseBom = "33.0.0"
+firebaseBom = "34.9.0"
 
 # Hilt
-hilt = "2.48"
+hilt = "2.57.1"
 
 # Room
-room = "2.6.1"
+room = "2.8.4"
 
 # Navigation
-navigation = "2.7.7"
+navigation = "2.9.7"
 
 # Glide
-glide = "4.16.0"
+glide = "5.0.5"
 
 # Retrofit
-retrofit = "2.9.0"
-okhttp = "4.12.0"
+retrofit = "3.0.0"
+okhttp = "5.0.0"
 
 # Coroutines
-coroutines = "1.7.3"
+coroutines = "1.10.2"
 
 # Lifecycle
-lifecycle = "2.7.0"
+lifecycle = "2.10.0"
 
 # Google Services
-googleServices = "4.4.1"
+googleServices = "4.4.3"
 
 # Crashlytics
-firebaseCrashlytics = "3.0.2"
+firebaseCrashlytics = "3.0.6"
 
 # Fragment KTX
-fragmentKtx = "1.6.2"
+fragmentKtx = "1.8.9"
 
 # Location Services
-playServicesLocation = "21.1.0"
+playServicesLocation = "21.3.0"
 
 # AdMob
-playServicesAds = "23.0.0"
+playServicesAds = "23.5.0"
 
 # Kakao Map
-kakaoMap = "2.9.5"
+kakaoMap = "2.11.9"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -63,14 +64,14 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
-# Firebase
+# Firebase (KTX extensions are included in main artifacts since Firebase BOM 32+)
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
-firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx" }
-firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
-firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics-ktx" }
-firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
 
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
@@ -87,7 +88,7 @@ navigation-ui = { group = "androidx.navigation", name = "navigation-ui-ktx", ver
 
 # Glide
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
-glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", version.ref = "glide" }
+glide-ksp = { group = "com.github.bumptech.glide", name = "ksp", version.ref = "glide" }
 
 # Retrofit
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
@@ -121,5 +122,4 @@ jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = 
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebaseCrashlytics" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
-
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

@@ -36,6 +36,7 @@ import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.LabelOptions
 import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
+import com.kakao.vectormap.label.LabelTextBuilder
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -255,7 +256,7 @@ class LocationFragment : Fragment() {
 
                 val labelOptions = LabelOptions.from(latLng).apply {
                     setStyles(labelStyles)
-                    setTexts(labelText)
+                    setTexts(LabelTextBuilder().setTexts(labelText))
                 }
 
                 layer.addLabel(labelOptions)
@@ -295,7 +296,7 @@ class LocationFragment : Fragment() {
 
                 val labelOptions = LabelOptions.from(latLng).apply {
                     setStyles(labelStyles)
-                    setTexts(busStop.name)
+                    setTexts(LabelTextBuilder().setTexts(busStop.name))
                 }
 
                 layer.addLabel(labelOptions)

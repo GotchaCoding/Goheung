@@ -5,9 +5,9 @@ package com.goheung.app.data.model
  */
 enum class AttendanceStatus(val displayName: String) {
     WORKING("근무중"),
-    REMOTE("재택근무"),
-    ON_LEAVE("휴가"),
-    HALF_DAY("반차")
+    FIELD_WORK("외근중"),
+    ANNUAL_LEAVE("연차"),
+    HALF_DAY_LEAVE("반차")
 }
 
 /**

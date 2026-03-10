@@ -86,6 +86,7 @@ class MoreViewModel @Inject constructor(
         val uid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _loading.value = true
+            _attendanceUpdateSuccess.value = null
             attendanceRepository.updateAttendance(uid, status)
                 .onSuccess {
                     _attendanceUpdateSuccess.value = true

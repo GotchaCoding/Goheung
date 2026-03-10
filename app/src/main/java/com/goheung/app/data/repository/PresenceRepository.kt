@@ -38,7 +38,7 @@ class PresenceRepository @Inject constructor(
                 "inChat" to false,
                 "chatRoomId" to null
             )
-            presenceRef.setValue(presenceData).await()
+            presenceRef.updateChildren(presenceData).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set online", e)

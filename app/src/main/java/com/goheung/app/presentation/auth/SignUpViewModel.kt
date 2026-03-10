@@ -27,7 +27,7 @@ class SignUpViewModel @Inject constructor(
     private val _signUpState = MutableLiveData<SignUpState>()
     val signUpState: LiveData<SignUpState> = _signUpState
 
-    fun signUp(displayName: String, email: String, password: String, department: String) {
+    fun signUp(displayName: String, email: String, password: String, region: String, department: String) {
         if (displayName.isBlank() || email.isBlank() || password.isBlank()) {
             _signUpState.value = SignUpState.Error("이름, 이메일, 비밀번호는 필수 입력입니다")
             return
@@ -47,6 +47,7 @@ class SignUpViewModel @Inject constructor(
                         uid = firebaseUser.uid,
                         email = email,
                         displayName = displayName,
+                        region = region,
                         department = department
                     )
                     val createResult = userRepository.createUser(user)

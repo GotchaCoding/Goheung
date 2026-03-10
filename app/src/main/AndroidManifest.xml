@@ -51,7 +51,7 @@
         <!-- AdMob App ID (테스트용) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-1990818791252502~5516314154" />
 
         <!-- AdMob과 Firebase Analytics 간 AD_SERVICES_CONFIG 충돌 해결 -->
         <property

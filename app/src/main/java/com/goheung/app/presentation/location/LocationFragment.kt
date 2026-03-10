@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -155,8 +154,8 @@ class LocationFragment : Fragment() {
 
         viewModel.myLocation.observe(viewLifecycleOwner) { myLocation ->
             myLocation?.let {
-                // 버스 추적 중이 아닐 때만 카메라 자동 이동
-                if (viewModel.isTrackingBus.value != true) {
+                // 내 위치 추적 모드일 때만 카메라 자동 이동
+                if (viewModel.trackingMode.value == TrackingMode.MY_LOCATION) {
                     moveCameraToLocation(it.lat, it.lng, zoom = DEFAULT_ZOOM)
                 }
             }
@@ -173,9 +172,9 @@ class LocationFragment : Fragment() {
             }
         }
 
-        // 버스 추적 상태 관찰
-        viewModel.isTrackingBus.observe(viewLifecycleOwner) { isTracking ->
-            updateTrackingUI(isTracking)
+        // 추적 모드 상태 관찰
+        viewModel.trackingMode.observe(viewLifecycleOwner) { mode ->
+            updateTrackingModeUI(mode)
         }
 
         // 가장 가까운 버스 위치 관찰
@@ -203,35 +202,28 @@ class LocationFragment : Fragment() {
         }
     }
 
-    private fun updateTrackingUI(isTracking: Boolean) {
-        val colorRes = if (isTracking) R.color.tracking_active else R.color.fab_default
-        binding.fabMyLocation.backgroundTintList =
-            ColorStateList.valueOf(ContextCompat.getColor(requireContext(), colorRes))
+    private fun updateTrackingModeUI(mode: TrackingMode) {
+        when (mode) {
+            TrackingMode.MY_LOCATION -> {
+                binding.fabMyLocation.setImageResource(R.drawable.ic_my_location)
+                binding.fabMyLocation.backgroundTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.fab_default))
+            }
+            TrackingMode.BUS -> {
+                binding.fabMyLocation.setImageResource(R.drawable.ic_bus_tracking)
+                binding.fabMyLocation.backgroundTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.tracking_active))
+            }
+        }
     }
 
     private fun setupListeners() {
-        // 기존 클릭: 내 위치로 이동
+        // 클릭: 추적 모드 토글 (내 위치 ↔ 버스)
         binding.fabMyLocation.setOnClickListener {
-            viewModel.myLocation.value?.let { myLocation ->
-                moveCameraToLocation(myLocation.lat, myLocation.lng, zoom = DEFAULT_ZOOM)
+            val success = viewModel.toggleTrackingMode()
+            if (!success) {
+                Toast.makeText(requireContext(), R.string.no_bus_available, Toast.LENGTH_SHORT).show()
             }
-        }
-
-        // 롱클릭: 버스 추적 모드 시작
-        binding.fabMyLocation.setOnLongClickListener {
-            startBusTracking()
-            true
-        }
-
-        // 터치 해제 감지: 버스 추적 모드 종료
-        binding.fabMyLocation.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP ||
-                event.action == MotionEvent.ACTION_CANCEL) {
-                if (viewModel.isTrackingBus.value == true) {
-                    stopBusTracking()
-                }
-            }
-            false  // 다른 리스너도 동작하도록 false 반환
         }
     }
 
@@ -370,20 +362,6 @@ class LocationFragment : Fragment() {
         } else {
             binding.layoutSpeed.isVisible = false
         }
-    }
-
-    private fun startBusTracking() {
-        if (!viewModel.hasAvailableBus()) {
-            Toast.makeText(requireContext(), R.string.no_bus_available, Toast.LENGTH_SHORT).show()
-            return
-        }
-        viewModel.startBusTracking()
-        Toast.makeText(requireContext(), R.string.bus_tracking_started, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun stopBusTracking() {
-        viewModel.stopBusTracking()
-        Toast.makeText(requireContext(), R.string.bus_tracking_stopped, Toast.LENGTH_SHORT).show()
     }
 
     private fun requestLocationPermission() {

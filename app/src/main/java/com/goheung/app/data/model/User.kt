@@ -7,6 +7,7 @@ data class User(
     val uid: String = "",
     val email: String = "",
     val displayName: String = "",
+    val region: String = "",
     val department: String = "",
     val profileImageUrl: String? = null,
     val statusMessage: String? = null,

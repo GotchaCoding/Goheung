@@ -42,6 +42,7 @@
     <!-- Auth - Sign Up -->
     <string name="sign_up_title">회원가입</string>
     <string name="display_name_hint">이름</string>
+    <string name="region_hint">근무지역</string>
     <string name="department_hint">부서</string>
     <string name="sign_up_button">가입하기</string>
     <string name="login_link">이미 계정이 있으신가요? 로그인</string>

@@ -93,7 +93,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:contentDescription="@string/my_location"
-        app:srcCompat="@android:drawable/ic_menu_mylocation" />
+        app:srcCompat="@drawable/ic_my_location" />
 
     <!-- ProgressBar -->
     <ProgressBar

@@ -26,6 +26,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * 추적 모드 열거형
+ */
+enum class TrackingMode {
+    MY_LOCATION,  // 내 위치 추적
+    BUS           // 버스 추적
+}
+
 @HiltViewModel
 class LocationViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
@@ -66,7 +74,11 @@ class LocationViewModel @Inject constructor(
     private val _myBearing = MutableLiveData<Float?>()
     val myBearing: LiveData<Float?> = _myBearing
 
-    // 버스 추적 상태
+    // 추적 모드 상태
+    private val _trackingMode = MutableLiveData(TrackingMode.MY_LOCATION)
+    val trackingMode: LiveData<TrackingMode> = _trackingMode
+
+    // 버스 추적 상태 (trackingMode 기반으로 파생)
     private val _isTrackingBus = MutableLiveData(false)
     val isTrackingBus: LiveData<Boolean> = _isTrackingBus
 
@@ -301,6 +313,25 @@ class LocationViewModel @Inject constructor(
                 location.lat, location.lng
             ) <= MATCHING_DISTANCE_THRESHOLD
         }
+    }
+
+    /**
+     * 추적 모드 토글 (내 위치 ↔ 버스)
+     * @return 토글 성공 여부 (버스 모드로 전환 시 버스가 없으면 false)
+     */
+    fun toggleTrackingMode(): Boolean {
+        val newMode = if (_trackingMode.value == TrackingMode.MY_LOCATION) {
+            if (!hasAvailableBus()) {
+                return false
+            }
+            startBusTracking()
+            TrackingMode.BUS
+        } else {
+            stopBusTracking()
+            TrackingMode.MY_LOCATION
+        }
+        _trackingMode.value = newMode
+        return true
     }
 
     /**

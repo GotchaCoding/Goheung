@@ -65,8 +65,9 @@ class SignUpFragment : Fragment() {
             val displayName = binding.editTextDisplayName.text.toString().trim()
             val email = binding.editTextEmail.text.toString().trim()
             val password = binding.editTextPassword.text.toString()
+            val region = binding.editTextRegion.text.toString().trim()
             val department = binding.editTextDepartment.text.toString().trim()
-            viewModel.signUp(displayName, email, password, department)
+            viewModel.signUp(displayName, email, password, region, department)
         }
 
         binding.textViewLoginLink.setOnClickListener {
@@ -80,6 +81,7 @@ class SignUpFragment : Fragment() {
         binding.editTextDisplayName.isEnabled = !isLoading
         binding.editTextEmail.isEnabled = !isLoading
         binding.editTextPassword.isEnabled = !isLoading
+        binding.editTextRegion.isEnabled = !isLoading
         binding.editTextDepartment.isEnabled = !isLoading
     }
 

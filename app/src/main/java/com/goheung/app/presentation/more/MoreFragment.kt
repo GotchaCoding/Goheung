@@ -33,7 +33,7 @@ class MoreFragment : Fragment() {
 
     private val viewModel: MoreViewModel by viewModels()
     private var isSpinnerInitialized = false
-    private var isRoleSpinnerInitialized = false
+    private var lastSelectedRole: UserRole? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -100,14 +100,15 @@ class MoreFragment : Fragment() {
                     id: Long
                 ) {
                     val selectedRole = roles[position]
-                    Log.d(TAG, "onItemSelected: position=$position, role=${selectedRole.name}, isInitialized=$isRoleSpinnerInitialized")
+                    Log.d(TAG, "onItemSelected: position=$position, role=${selectedRole.name}, lastSelectedRole=${lastSelectedRole?.name}")
 
-                    if (isRoleSpinnerInitialized) {
+                    // 실제 변경이 있을 때만 업데이트 (같은 값이면 무시)
+                    if (lastSelectedRole != null && lastSelectedRole != selectedRole) {
                         Log.d(TAG, "Calling updateRole with ${selectedRole.name}")
                         viewModel.updateRole(selectedRole)
                         Toast.makeText(requireContext(), "역할 변경: ${selectedRole.displayName}", Toast.LENGTH_SHORT).show()
                     }
-                    isRoleSpinnerInitialized = true
+                    lastSelectedRole = selectedRole
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>) {}
@@ -137,8 +138,8 @@ class MoreFragment : Fragment() {
         }
 
         viewModel.currentRole.observe(viewLifecycleOwner) { role ->
-            Log.d(TAG, "currentRole observer: role=${role.name}, setting isRoleSpinnerInitialized=false")
-            isRoleSpinnerInitialized = false
+            Log.d(TAG, "currentRole observer: role=${role.name}, lastSelectedRole=${lastSelectedRole?.name}")
+            lastSelectedRole = role  // 현재 값으로 설정 (스피너 선택 시 비교용)
             val roles = UserRole.values()
             val index = roles.indexOf(role)
             Log.d(TAG, "Setting spinner selection to index=$index (${role.name})")
@@ -147,7 +148,11 @@ class MoreFragment : Fragment() {
 
         viewModel.attendanceUpdateSuccess.observe(viewLifecycleOwner) { success ->
             success?.let {
-                // 필요시 Toast 표시
+                if (it) {
+                    Toast.makeText(requireContext(), "근무 상태가 저장되었습니다", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "근무 상태 저장 실패", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 

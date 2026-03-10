@@ -13,6 +13,7 @@ import com.goheung.app.data.model.UserRole
 import com.goheung.app.data.repository.AttendanceRepository
 import com.goheung.app.data.repository.AuthRepository
 import com.goheung.app.data.repository.UserRepository
+import com.goheung.app.util.Event
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -39,14 +40,14 @@ class MoreViewModel @Inject constructor(
     private val _currentAttendance = MutableLiveData<AttendanceStatus>()
     val currentAttendance: LiveData<AttendanceStatus> = _currentAttendance
 
-    private val _attendanceUpdateSuccess = MutableLiveData<Boolean?>()
-    val attendanceUpdateSuccess: LiveData<Boolean?> = _attendanceUpdateSuccess
+    private val _attendanceUpdateSuccess = MutableLiveData<Event<Boolean>>()
+    val attendanceUpdateSuccess: LiveData<Event<Boolean>> = _attendanceUpdateSuccess
 
     private val _currentRole = MutableLiveData<UserRole>()
     val currentRole: LiveData<UserRole> = _currentRole
 
-    private val _roleUpdateSuccess = MutableLiveData<Boolean?>()
-    val roleUpdateSuccess: LiveData<Boolean?> = _roleUpdateSuccess
+    private val _roleUpdateSuccess = MutableLiveData<Event<Boolean>>()
+    val roleUpdateSuccess: LiveData<Event<Boolean>> = _roleUpdateSuccess
 
     init {
         loadProfile()
@@ -86,13 +87,12 @@ class MoreViewModel @Inject constructor(
         val uid = authRepository.currentUser?.uid ?: return
         viewModelScope.launch {
             _loading.value = true
-            _attendanceUpdateSuccess.value = null
             attendanceRepository.updateAttendance(uid, status)
                 .onSuccess {
-                    _attendanceUpdateSuccess.value = true
+                    _attendanceUpdateSuccess.value = Event(true)
                 }
                 .onFailure {
-                    _attendanceUpdateSuccess.value = false
+                    _attendanceUpdateSuccess.value = Event(false)
                 }
             _loading.value = false
         }
@@ -103,18 +103,17 @@ class MoreViewModel @Inject constructor(
         Log.d(TAG, "updateRole called with role=${role.name}, uid=$uid")
         viewModelScope.launch {
             _loading.value = true
-            _roleUpdateSuccess.value = null  // 초기화
             userRepository.updateUserRole(uid, role.name)
                 .onSuccess {
                     Log.d(TAG, "Role updated successfully to ${role.name} in Firebase")
                     _currentRole.value = role
-                    _roleUpdateSuccess.value = true
+                    _roleUpdateSuccess.value = Event(true)
                     // 프로필도 함께 업데이트 (캐시된 값 갱신)
                     _profile.value = _profile.value?.copy(role = role.name)
                 }
                 .onFailure { e ->
                     Log.e(TAG, "Failed to update role in Firebase", e)
-                    _roleUpdateSuccess.value = false
+                    _roleUpdateSuccess.value = Event(false)
                 }
             _loading.value = false
         }

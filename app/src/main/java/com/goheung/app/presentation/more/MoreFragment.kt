@@ -19,6 +19,7 @@ import com.goheung.app.data.model.AttendanceStatus
 import com.goheung.app.data.model.UserRole
 import com.goheung.app.databinding.FragmentMoreBinding
 import com.goheung.app.presentation.auth.LoginFragment
+import com.goheung.app.util.Event
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -54,6 +55,7 @@ class MoreFragment : Fragment() {
     }
 
     private fun setupAttendanceSpinner() {
+        isSpinnerInitialized = false  // View 재생성 시 플래그 리셋
         val statuses = AttendanceStatus.values()
         val adapter = ArrayAdapter(
             requireContext(),
@@ -135,6 +137,8 @@ class MoreFragment : Fragment() {
             isSpinnerInitialized = false
             val statuses = AttendanceStatus.values()
             binding.spinnerAttendance.setSelection(statuses.indexOf(status))
+            // setSelection이 같은 position일 때 onItemSelected 안불리므로 수동 복원
+            isSpinnerInitialized = true
         }
 
         viewModel.currentRole.observe(viewLifecycleOwner) { role ->
@@ -146,9 +150,9 @@ class MoreFragment : Fragment() {
             binding.spinnerRole.setSelection(index)
         }
 
-        viewModel.attendanceUpdateSuccess.observe(viewLifecycleOwner) { success ->
-            success?.let {
-                if (it) {
+        viewModel.attendanceUpdateSuccess.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
                     Toast.makeText(requireContext(), "근무 상태가 저장되었습니다", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(requireContext(), "근무 상태 저장 실패", Toast.LENGTH_SHORT).show()
@@ -156,9 +160,9 @@ class MoreFragment : Fragment() {
             }
         }
 
-        viewModel.roleUpdateSuccess.observe(viewLifecycleOwner) { success ->
-            success?.let {
-                if (it) {
+        viewModel.roleUpdateSuccess.observe(viewLifecycleOwner) { event ->
+            event.getContentIfNotHandled()?.let { success ->
+                if (success) {
                     Log.d(TAG, "Role update SUCCESS - saved to Firebase")
                     Toast.makeText(requireContext(), "역할이 저장되었습니다", Toast.LENGTH_SHORT).show()
                 } else {

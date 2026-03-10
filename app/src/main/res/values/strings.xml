@@ -125,7 +125,7 @@
     <string name="nearest_bus_stop">가장 가까운 정류장: %1$s (%2$s)</string>
 
     <!-- Role -->
-    <string name="role_label">역할</string>
+    <string name="role_label">셔틀버스</string>
     <string name="role_driver">운전기사</string>
     <string name="role_passenger">승객</string>
     <string name="role_none">미설정</string>

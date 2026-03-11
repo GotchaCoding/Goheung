@@ -3,7 +3,11 @@ package com.goheung.app
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.goheung.app.presentation.auth.LoginFragment
@@ -43,6 +47,7 @@ class MainActivity : AppCompatActivity(), BottomNavController {
         adView.loadAd(adRequest)
 
         bottomNav = findViewById(R.id.bottom_navigation)
+        setupWindowInsets()
         setupBottomNavigation()
 
         if (savedInstanceState == null) {
@@ -91,6 +96,16 @@ class MainActivity : AppCompatActivity(), BottomNavController {
         supportFragmentManager.commit {
             replace(R.id.fragment_container, ChatDetailFragment.newInstance(chatRoomId, chatRoomName))
             addToBackStack(null)
+        }
+    }
+
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(adView) { view, insets ->
+            val navBarInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                bottomMargin = navBarInsets.bottom
+            }
+            insets
         }
     }
 

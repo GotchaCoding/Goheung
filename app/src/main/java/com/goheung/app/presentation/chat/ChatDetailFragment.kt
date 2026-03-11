@@ -7,7 +7,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -56,10 +60,33 @@ class ChatDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupWindowInsets()
         setupToolbar()
         setupRecyclerView()
         setupObservers()
         setupListeners()
+    }
+
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val systemBarInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            // 키보드가 올라오면 IME 높이만큼, 아니면 시스템 바 높이만큼 padding
+            val bottomPadding = if (imeInsets.bottom > 0) imeInsets.bottom else systemBarInsets.bottom
+
+            binding.root.updatePadding(bottom = bottomPadding)
+
+            // 키보드가 올라오면 최신 메시지로 스크롤
+            if (imeInsets.bottom > 0) {
+                val messageCount = adapter.itemCount
+                if (messageCount > 0) {
+                    binding.recyclerViewMessages.smoothScrollToPosition(messageCount - 1)
+                }
+            }
+
+            WindowInsetsCompat.CONSUMED
+        }
     }
 
     private fun setupToolbar() {

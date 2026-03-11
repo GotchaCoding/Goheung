@@ -126,10 +126,12 @@ class MainActivity : AppCompatActivity(), BottomNavController {
 
     override fun showBottomNav() {
         bottomNav.visibility = View.VISIBLE
+        adView.visibility = View.VISIBLE
     }
 
     override fun hideBottomNav() {
         bottomNav.visibility = View.GONE
+        adView.visibility = View.GONE
     }
 
     override fun onPause() {

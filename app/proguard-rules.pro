@@ -19,17 +19,14 @@
     public <init>(...);
 }
 
+# Firestore가 제네릭 필드(List<CertificateItem> 등)를 역직렬화하려면 필요.
+# 지우면 minify된 release 빌드에서만 조용히 깨진다.
+-keepattributes Signature
+-keepattributes *Annotation*
+
 # Firebase
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
-
-# ============================================
-# Room Database
-# ============================================
--keep class com.goheung.app.data.local.** { *; }
--keepclassmembers class com.goheung.app.data.local.** {
-    public <init>();
-}
 
 # ============================================
 # Hilt / Dagger
@@ -46,31 +43,6 @@
 }
 
 # ============================================
-# Retrofit / OkHttp / Gson
-# ============================================
--keepattributes Signature
--keepattributes *Annotation*
-
-# Gson
--keep class com.google.gson.** { *; }
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
-
-# Retrofit
--dontwarn retrofit2.**
--keep class retrofit2.** { *; }
--keepclasseswithmembers class * {
-    @retrofit2.http.* <methods>;
-}
-
-# OkHttp
--dontwarn okhttp3.**
--dontwarn okio.**
--keep class okhttp3.** { *; }
--keep class okio.** { *; }
-
-# ============================================
 # Kotlin
 # ============================================
 -keep class kotlin.** { *; }
@@ -85,9 +57,3 @@
     volatile <fields>;
 }
 -dontwarn kotlinx.coroutines.**
-
-# ============================================
-# Kakao Map SDK
-# ============================================
--keep class com.kakao.vectormap.** { *; }
--dontwarn com.kakao.vectormap.**

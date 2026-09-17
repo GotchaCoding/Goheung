@@ -16,12 +16,20 @@ class NotificationChannelManager @Inject constructor(
 ) {
     companion object {
         const val CHANNEL_ID_CHAT = "goheung_chat_messages"
-        const val CHANNEL_ID_BUS_ARRIVAL = "goheung_bus_arrival"
+
+        /**
+         * v1.7(셔틀버스) 시절 채널. 코드에서 지워도 기존 단말에는 남아
+         * 시스템 알림 설정에 죽은 토글로 노출되므로 명시적으로 삭제한다.
+         * 보급률이 충분해지면 이 상수와 삭제 호출을 함께 제거할 것.
+         */
+        private const val LEGACY_CHANNEL_ID_BUS_ARRIVAL = "goheung_bus_arrival"
     }
 
     fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(NotificationManager::class.java)
+
+            notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_ID_BUS_ARRIVAL)
 
             // 채팅 메시지 채널
             val chatChannel = NotificationChannel(
@@ -34,18 +42,7 @@ class NotificationChannelManager @Inject constructor(
                 enableLights(true)
             }
 
-            // 버스 도착 알림 채널
-            val busArrivalChannel = NotificationChannel(
-                CHANNEL_ID_BUS_ARRIVAL,
-                context.getString(R.string.notification_channel_bus_arrival_name),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = context.getString(R.string.notification_channel_bus_arrival_description)
-                enableVibration(true)
-                enableLights(true)
-            }
-
-            notificationManager.createNotificationChannels(listOf(chatChannel, busArrivalChannel))
+            notificationManager.createNotificationChannels(listOf(chatChannel))
         }
     }
 

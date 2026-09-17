@@ -5,8 +5,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:name=".GoheungApplication"
@@ -42,11 +40,6 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="goheung_chat_messages" />
-
-        <!-- Kakao Map API Key (local.properties에서 관리) -->
-        <meta-data
-            android:name="com.kakao.sdk.AppKey"
-            android:value="${KAKAO_NATIVE_APP_KEY}" />
 
         <!-- AdMob App ID (테스트용) -->
         <meta-data

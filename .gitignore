@@ -56,3 +56,12 @@ gen-external-apklibs
 # with Android Studio 3.5.
 
 # End of https://www.toptal.com/developers/gitignore/api/android
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+functions/node_modules/
+functions/lib/
+web/node_modules/

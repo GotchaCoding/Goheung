@@ -101,8 +101,9 @@
     <string name="notification_channel_chat_description">새로운 채팅 메시지 알림</string>
 
     <!-- Role -->
-    <string name="role_label">셔틀버스</string>
-    <string name="role_driver">운전기사</string>
-    <string name="role_passenger">승객</string>
+    <string name="role_label">역할</string>
+    <string name="role_supplier">공급자</string>
+    <string name="role_buyer">공급받는자</string>
+    <string name="role_admin">관리자</string>
     <string name="role_none">미설정</string>
 </resources>
